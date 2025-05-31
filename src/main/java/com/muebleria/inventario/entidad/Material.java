@@ -1,6 +1,6 @@
 package com.muebleria.inventario.entidad;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -32,10 +32,10 @@ public class Material {
     private Long stockActual;
 
     @OneToMany(mappedBy = "material", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
+    @JsonManagedReference("material-proveedorMateriales")
     private List<ProveedorMateriales> proveedorMateriales = new ArrayList<>();
 
     @OneToMany(mappedBy = "material", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
+    @JsonManagedReference("material-materialMuebles")
     private List<MaterialMueble> materialMuebles = new ArrayList<>();
 }

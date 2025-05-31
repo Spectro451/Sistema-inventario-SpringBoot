@@ -19,11 +19,12 @@ public class MaterialMueble {
 
     @ManyToOne
     @JoinColumn(name = "mueble_id", nullable = false)
-    @JsonBackReference
+    @JsonBackReference("mueble-materialMuebles")
     private Mueble mueble;
 
     @ManyToOne
     @JoinColumn(name = "material_id", nullable = false)
+    @JsonBackReference("material-materialMuebles")
     private Material material;
 
     @Column(name = "cantidadUtilizada", nullable = false)

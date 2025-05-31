@@ -29,6 +29,11 @@ public class Mueble {
     private Long stock;
 
     @OneToMany(mappedBy = "mueble", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
+    @JsonManagedReference("mueble-materialMuebles")
     private List<MaterialMueble> materialMuebles = new ArrayList<>();
+
+    @OneToMany(mappedBy = "mueble", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("mueble-ventaMuebles")
+    private List<VentaMueble> ventaMuebles = new ArrayList<>();
+
 }

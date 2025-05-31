@@ -1,5 +1,7 @@
 package com.muebleria.inventario.entidad;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -16,17 +18,19 @@ public class VentaMueble {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "muebleId", nullable = false)
+    @JoinColumn(name = "mueble_id", nullable = false)
+    @JsonBackReference("mueble-ventaMuebles")
     private Mueble mueble;
 
     @ManyToOne
-    @JoinColumn(name = "ventaId", nullable = false)
+    @JoinColumn(name = "venta_id", nullable = false)
+    @JsonBackReference(value = "venta-ventamueble")
     private Venta venta;
 
     @Column(name = "cantidad", nullable = false)
     private Long cantidad;
 
-    @Column(name = "precioUnitario", nullable = false)
+    @Column(name = "precio_unitario", nullable = false)
     private Long precioUnitario;
 
     @Column(name = "subtotal", nullable = false)

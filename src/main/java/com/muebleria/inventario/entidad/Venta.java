@@ -1,11 +1,13 @@
 package com.muebleria.inventario.entidad;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
+
 import java.util.List;
 
 @Entity
@@ -17,12 +19,13 @@ public class Venta {
     private Long id;
 
     @Column(nullable = false)
-    private Date fecha;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate fecha;
 
     @Column(nullable = false)
     private Long total;
 
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
+    @JsonManagedReference(value = "venta-ventamueble")
     private List<VentaMueble> ventaMuebles = new ArrayList<>();
 }

@@ -1,5 +1,6 @@
 package com.muebleria.inventario.entidad;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -18,10 +19,12 @@ public class ProveedorMateriales {
 
     @ManyToOne
     @JoinColumn(name = "proveedor_id", nullable = false)
+    @JsonBackReference("proveedor-materiales")
     private Proveedor proveedor;
 
     @ManyToOne
     @JoinColumn(name = "material_id", nullable = false)
+    @JsonBackReference("material-proveedorMateriales")
     private Material material;
 
     @Column(name = "costo_unitario", nullable = false)

@@ -44,7 +44,12 @@ public class VentaController {
     }
 
     @DeleteMapping("/{id}")
-    public void eliminar(@PathVariable("id") Long id){
-        ventaService.eliminar(id);
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        try {
+            ventaService.eliminar(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 }

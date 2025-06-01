@@ -40,6 +40,9 @@ public class UsuarioService {
     }
 
     public void eliminar(Long id) {
+        if (!usuarioRepository.existsById(id)) {
+            throw new RuntimeException("Usuario con id " + id + " no existe.");
+        }
         usuarioRepository.deleteById(id);
     }
 }

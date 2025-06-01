@@ -8,6 +8,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,13 +31,10 @@ public class MuebleService {
         return muebleRepository.findById(id);
     }
 
-    public Mueble save(Mueble mueble) {
-
-        return muebleRepository.save(mueble);
-    }
-
     public void delete(Long id) {
-
+        if (!muebleRepository.existsById(id)) {
+            throw new RuntimeException("Mueble con id " + id + " no existe.");
+        }
         muebleRepository.deleteById(id);
     }
 
@@ -58,14 +56,28 @@ public class MuebleService {
     }
 
     @Transactional
-    public Mueble guardarConMaterial(Mueble mueble) {
+    public Mueble guardarConDetalle(Mueble mueble) {
+        Mueble muebleSolo = new Mueble();
+        muebleSolo.setNombre(mueble.getNombre());
+        muebleSolo.setDescripcion(mueble.getDescripcion());
+        muebleSolo.setPrecioVenta(mueble.getPrecioVenta());
+        muebleSolo.setStock(mueble.getStock());
 
-        Mueble muebleGuardado = muebleRepository.save(mueble);
+        Mueble muebleGuardado = muebleRepository.save(muebleSolo);
 
-        for (MaterialMueble mm : mueble.getMaterialMuebles()) {
-            mm.setMueble(muebleGuardado);
-            materialMuebleService.guardar(mm);
+        List<MaterialMueble> relacionesGuardadas = new ArrayList<>();
+
+        if (mueble.getMaterialMuebles() != null) {
+            for (MaterialMueble mm : mueble.getMaterialMuebles()) {
+                mm.setMueble(muebleGuardado);
+                MaterialMueble guardado = materialMuebleService.guardar(mm);
+                relacionesGuardadas.add(guardado);
+            }
         }
+
+
+        muebleGuardado.setMaterialMuebles(relacionesGuardadas);
+
         return muebleGuardado;
     }
 }

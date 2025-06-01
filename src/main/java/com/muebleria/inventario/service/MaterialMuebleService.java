@@ -39,24 +39,30 @@ public class MaterialMuebleService {
         Long materialId = materialMueble.getMaterial().getId();
 
         Material material = materialRepository.findById(materialId)
-                .orElseThrow(() -> new RuntimeException("Material no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Material no encontrado id: " + materialId));
 
         Long stockActual = material.getStockActual();
         Long cantidadNecesaria = materialMueble.getCantidadUtilizada();
 
         if (stockActual < cantidadNecesaria) {
-            throw new RuntimeException("Stcok insuficiente de: " + material.getNombre() + ", Stock actual: " + material.getStockActual());
+            throw new RuntimeException("Stock insuficiente de: " + material.getNombre()
+                    + ". Stock actual: " + stockActual + ", requerido: " + cantidadNecesaria);
         }
 
         material.setStockActual(stockActual - cantidadNecesaria);
         materialRepository.save(material);
+
+        materialMueble.setMaterial(material);
 
         return materialMuebleRepository.save(materialMueble);
 
     }
 
     public void eliminar(Long id) {
-        materialMuebleRepository.deleteById(id);
+        if (!materialRepository.existsById(id)) {
+            throw new RuntimeException("MaterialMueble con id " + id + " no existe.");
+        }
+        materialRepository.deleteById(id);
     }
 
 }

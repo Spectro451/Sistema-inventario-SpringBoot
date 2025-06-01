@@ -2,6 +2,7 @@ package com.muebleria.inventario.service;
 
 import com.muebleria.inventario.entidad.Material;
 import com.muebleria.inventario.repository.MaterialRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +28,9 @@ public class MaterialService {
     }
 
     public void eliminar(Long id) {
+        if (!materialRepository.existsById(id)) {
+            throw new RuntimeException("Material con id " + id + " no existe.");
+        }
         materialRepository.deleteById(id);
     }
 }

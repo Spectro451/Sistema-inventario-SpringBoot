@@ -46,11 +46,9 @@ public class VentaMuebleService {
             throw new RuntimeException("Stock insuficiente del mueble: " + mueble.getNombre());
         }
 
-        // Descontar stock
         mueble.setStock(mueble.getStock() - cantidad);
         muebleRepository.save(mueble);
 
-        // Calcular precioUnitario y subtotal
         Long precioUnitario = mueble.getPrecioVenta();
         Long subTotal = precioUnitario * cantidad;
 
@@ -60,14 +58,15 @@ public class VentaMuebleService {
         vm.setPrecioUnitario(precioUnitario);
         vm.setSubtotal(subTotal);
 
-        // Asignar el mueble ya cargado para evitar campos nulos
         vm.setMueble(mueble);
 
-        // Guardar el detalle de la venta
         return ventaMuebleRepository.save(vm);
     }
 
     public void deleteById(Long id) {
+        if (!ventaMuebleRepository.existsById(id)) {
+            throw new RuntimeException("VentaMueble con id " + id + " no existe.");
+        }
         ventaMuebleRepository.deleteById(id);
     }
 }

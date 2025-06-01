@@ -3,6 +3,7 @@ package com.muebleria.inventario.entidad;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
 @Entity
@@ -20,6 +21,7 @@ public class ProveedorMateriales {
     @ManyToOne
     @JoinColumn(name = "proveedor_id", nullable = false)
     @JsonBackReference("proveedor-materiales")
+    @EqualsAndHashCode.Exclude
     private Proveedor proveedor;
 
     @ManyToOne

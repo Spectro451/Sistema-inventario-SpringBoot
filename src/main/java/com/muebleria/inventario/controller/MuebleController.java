@@ -4,6 +4,7 @@ import com.muebleria.inventario.entidad.Mueble;
 import com.muebleria.inventario.service.MuebleService;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,7 +31,7 @@ public class MuebleController {
     @PostMapping
     public ResponseEntity<?> createMueble(@RequestBody Mueble mueble) {
         try{
-            Mueble muebleGuardado = muebleService.guardarConMaterial(mueble);
+            Mueble muebleGuardado = muebleService.guardarConDetalle(mueble);
             return ResponseEntity.ok(muebleGuardado);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -48,8 +49,13 @@ public class MuebleController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteMueble(@PathVariable Long id) {
-        muebleService.delete(id);
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        try {
+            muebleService.delete(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 
 }

@@ -12,23 +12,24 @@ import java.util.List;
 @Table(name = "Material")
 public class Material {
     @Id
-    @GeneratedValue( strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "nombre", nullable = false)
     private String nombre;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "tipo", nullable = false)
     private TipoMaterial tipo;
 
-    @Column(nullable = false)
+    @Column(name = "descripcion", nullable = false)
     private String descripcion;
 
-    @Column(nullable = false)
-    private String unidadMedida;
+    @Column(name = "unidad_medida", nullable = false)
+    private String unidadDeMedida;
 
-    @Column(nullable = false)
+    @Column(name = "stock_actual", nullable = false)
     private Long stockActual;
 
     @OneToMany(mappedBy = "material", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -1,5 +1,6 @@
 package com.muebleria.inventario.controller;
 
+import com.muebleria.inventario.dto.MuebleDTO;
 import com.muebleria.inventario.entidad.Mueble;
 import com.muebleria.inventario.service.MuebleService;
 import org.apache.coyote.Response;
@@ -18,10 +19,10 @@ public class MuebleController {
     @Autowired
     MuebleService muebleService;
 
-    @GetMapping
-    public List<Mueble> getMuebles() {
-        return muebleService.findAll();
-    }
+//    @GetMapping
+//    public List<Mueble> getMuebles() {
+//        return muebleService.findAll();
+//    }
 
     @GetMapping("/{id}")
     public Optional<Mueble> getByID(@PathVariable Long id) {
@@ -57,5 +58,8 @@ public class MuebleController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
-
+    @GetMapping
+    public List<MuebleDTO> listarMuebles() {
+        return muebleService.findAllDTO();
+    }
 }

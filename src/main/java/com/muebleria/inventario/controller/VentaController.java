@@ -1,5 +1,6 @@
 package com.muebleria.inventario.controller;
 
+import com.muebleria.inventario.dto.VentaDTO;
 import com.muebleria.inventario.entidad.Venta;
 import com.muebleria.inventario.service.VentaService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +19,10 @@ public class VentaController {
     @Autowired
     VentaService ventaService;
 
-    @GetMapping
-    public List<Venta> listar() {
-        return ventaService.findAll();
-    }
+//    @GetMapping
+//    public List<Venta> listar() {
+//        return ventaService.findAll();
+//    }
 
     @GetMapping("/{id}")
     public Optional<Venta> buscar(@PathVariable Long id) {
@@ -51,5 +52,9 @@ public class VentaController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
+    }
+    @GetMapping
+    public List<VentaDTO> listarVentas() {
+        return ventaService.findAllDTO();
     }
 }

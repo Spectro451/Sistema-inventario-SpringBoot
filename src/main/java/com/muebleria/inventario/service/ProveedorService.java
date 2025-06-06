@@ -1,5 +1,9 @@
 package com.muebleria.inventario.service;
 
+import com.muebleria.inventario.dto.MaterialDTO;
+import com.muebleria.inventario.dto.MaterialSimpleDTO;
+import com.muebleria.inventario.dto.ProveedorDTO;
+import com.muebleria.inventario.dto.ProveedorMaterialDTO;
 import com.muebleria.inventario.entidad.Material;
 import com.muebleria.inventario.entidad.Proveedor;
 import com.muebleria.inventario.entidad.ProveedorMateriales;
@@ -13,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ProveedorService {
@@ -89,5 +94,45 @@ public class ProveedorService {
             throw new RuntimeException("Proveedor con id " + id + " no existe.");
         }
         proveedorRepository.deleteById(id);
+    }
+
+    public List<ProveedorDTO> findAllDTO() {
+        List<Proveedor> proveedores = proveedorRepository.findAll();
+
+        return proveedores.stream().map(proveedor -> {
+            ProveedorDTO proveedorDTO = new ProveedorDTO();
+            proveedorDTO.setId(proveedor.getId());
+            proveedorDTO.setNombre(proveedor.getNombre());
+            proveedorDTO.setTelefono(proveedor.getTelefono());
+            proveedorDTO.setCorreo(proveedor.getCorreo());
+            proveedorDTO.setDireccion(proveedor.getDireccion());
+
+            if (proveedor.getProveedorMateriales() != null) {
+                List<ProveedorMaterialDTO> pmDTOs = proveedor.getProveedorMateriales().stream().map(pm -> {
+                    ProveedorMaterialDTO pmDTO = new ProveedorMaterialDTO();
+                    pmDTO.setId(pm.getId());
+                    pmDTO.setCostoUnitario(pm.getCostoUnitario());
+
+                    Material material = pm.getMaterial();
+                    MaterialSimpleDTO materialSimpleDTO = new MaterialSimpleDTO();
+                    materialSimpleDTO.setId(material.getId());
+                    materialSimpleDTO.setNombre(material.getNombre());
+                    materialSimpleDTO.setTipo(material.getTipo().toString()); // Si usas enum
+                    materialSimpleDTO.setDescripcion(material.getDescripcion());
+                    materialSimpleDTO.setUnidadDeMedida(material.getUnidadDeMedida());
+                    materialSimpleDTO.setStockActual(material.getStockActual());
+
+                    pmDTO.setMaterial(materialSimpleDTO);
+
+                    return pmDTO;
+                }).collect(Collectors.toList());
+
+                proveedorDTO.setProveedorMateriales(pmDTOs);
+            } else {
+                proveedorDTO.setProveedorMateriales(new ArrayList<>());
+            }
+
+            return proveedorDTO;
+        }).collect(Collectors.toList());
     }
 }

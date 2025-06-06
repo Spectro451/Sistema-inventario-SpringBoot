@@ -1,6 +1,11 @@
 package com.muebleria.inventario.service;
 
 
+import com.muebleria.inventario.dto.MaterialDTO;
+import com.muebleria.inventario.dto.MaterialMuebleDTO;
+import com.muebleria.inventario.dto.MaterialSimpleDTO;
+import com.muebleria.inventario.dto.MuebleDTO;
+import com.muebleria.inventario.entidad.Material;
 import com.muebleria.inventario.entidad.MaterialMueble;
 import com.muebleria.inventario.entidad.Mueble;
 import com.muebleria.inventario.repository.MuebleRepository;
@@ -11,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class MuebleService {
@@ -79,5 +85,45 @@ public class MuebleService {
         muebleGuardado.setMaterialMuebles(relacionesGuardadas);
 
         return muebleGuardado;
+    }
+
+    public List<MuebleDTO> findAllDTO() {
+        List<Mueble> muebles = muebleRepository.findAll();
+
+        return muebles.stream().map(mueble -> {
+            MuebleDTO muebleDTO = new MuebleDTO();
+            muebleDTO.setId(mueble.getId());
+            muebleDTO.setNombre(mueble.getNombre());
+            muebleDTO.setDescripcion(mueble.getDescripcion());
+            muebleDTO.setPrecioVenta(mueble.getPrecioVenta());
+            muebleDTO.setStock(mueble.getStock());
+
+            if (mueble.getMaterialMuebles() != null) {
+                List<MaterialMuebleDTO> mmDTOs = mueble.getMaterialMuebles().stream().map(mm -> {
+                    MaterialMuebleDTO mmDTO = new MaterialMuebleDTO();
+                    mmDTO.setId(mm.getId());
+                    mmDTO.setCantidadUtilizada(mm.getCantidadUtilizada());
+
+                    Material material = mm.getMaterial();
+                    MaterialSimpleDTO materialDTO = new MaterialSimpleDTO();
+                    materialDTO.setId(material.getId());
+                    materialDTO.setNombre(material.getNombre());
+                    materialDTO.setTipo(material.getTipo().toString());
+                    materialDTO.setDescripcion(material.getDescripcion());
+                    materialDTO.setUnidadDeMedida(material.getUnidadDeMedida());
+                    materialDTO.setStockActual(material.getStockActual());
+
+                    mmDTO.setMaterial(materialDTO);
+
+                    return mmDTO;
+                }).collect(Collectors.toList());
+
+                muebleDTO.setMaterialMuebles(mmDTOs);
+            } else {
+                muebleDTO.setMaterialMuebles(new ArrayList<>());
+            }
+
+            return muebleDTO;
+        }).collect(Collectors.toList());
     }
 }

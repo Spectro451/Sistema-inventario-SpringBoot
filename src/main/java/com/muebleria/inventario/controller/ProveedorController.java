@@ -1,5 +1,6 @@
 package com.muebleria.inventario.controller;
 
+import com.muebleria.inventario.dto.ProveedorDTO;
 import com.muebleria.inventario.entidad.Proveedor;
 import com.muebleria.inventario.service.ProveedorService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +19,10 @@ public class ProveedorController {
     @Autowired
     ProveedorService proveedorService;
 
-    @GetMapping
-    public List<Proveedor> getall() {
-        return proveedorService.getProveedores();
-    }
+//    @GetMapping
+//    public List<Proveedor> getall() {
+//        return proveedorService.getProveedores();
+//    }
 
     @PostMapping
     public ResponseEntity<?> guardar(@RequestBody Proveedor proveedor) {
@@ -49,5 +50,9 @@ public class ProveedorController {
     @GetMapping("/{id}")
     public Optional<Proveedor> getProveedorId(@PathVariable("id") Long id){
         return proveedorService.getProveedoresId(id);
+    }
+    @GetMapping
+    public List<ProveedorDTO> listarProveedores() {
+        return proveedorService.findAllDTO();
     }
 }

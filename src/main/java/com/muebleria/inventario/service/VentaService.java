@@ -1,6 +1,8 @@
 package com.muebleria.inventario.service;
 
 
+import com.muebleria.inventario.dto.VentaDTO;
+import com.muebleria.inventario.dto.VentaMuebleDTO;
 import com.muebleria.inventario.entidad.Mueble;
 import com.muebleria.inventario.entidad.Venta;
 import com.muebleria.inventario.entidad.VentaMueble;
@@ -64,5 +66,29 @@ public class VentaService {
         ventaGuardada.setTotal(total);
 
         return ventaRepository.save(ventaGuardada);
+    }
+    public List<VentaDTO> findAllDTO() {
+        return ventaRepository.findAll().stream().map(venta -> {
+            VentaDTO dto = new VentaDTO();
+            dto.setId(venta.getId());
+            dto.setFecha(venta.getFecha());
+            dto.setTotal(venta.getTotal());
+
+            List<VentaMuebleDTO> vmDTOs = venta.getVentaMuebles().stream().map(vm -> {
+                VentaMuebleDTO vmDto = new VentaMuebleDTO();
+                vmDto.setId(vm.getId());
+                vmDto.setCantidad(vm.getCantidad());
+                vmDto.setPrecioUnitario(vm.getPrecioUnitario());
+                vmDto.setSubtotal(vm.getSubtotal());
+
+                // Aquí traemos el nombre del mueble
+                vmDto.setNombreMueble(vm.getMueble().getNombre());
+
+                return vmDto;
+            }).toList();
+
+            dto.setVentaMuebles(vmDTOs);
+            return dto;
+        }).toList();
     }
 }

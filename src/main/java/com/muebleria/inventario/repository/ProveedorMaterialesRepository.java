@@ -14,7 +14,7 @@ public interface ProveedorMaterialesRepository extends JpaRepository<ProveedorMa
         List<ProveedorMateriales> findByMaterialId(Long materialId);
 
         boolean existsByProveedor_IdAndMaterial_Id(Long proveedorId, Long materialId);
-        
+
         ProveedorMateriales findByProveedor_IdAndMaterial_Id(Long proveedorId, Long materialId);
 }
 

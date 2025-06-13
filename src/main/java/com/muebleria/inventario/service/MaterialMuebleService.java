@@ -4,6 +4,7 @@ import com.muebleria.inventario.entidad.Material;
 import com.muebleria.inventario.entidad.MaterialMueble;
 import com.muebleria.inventario.repository.MaterialMuebleRepository;
 import com.muebleria.inventario.repository.MaterialRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -63,5 +64,47 @@ public class MaterialMuebleService {
             throw new RuntimeException("MaterialMueble con id " + id + " no existe.");
         }
         materialRepository.deleteById(id);
+    }
+
+    @Transactional
+    public MaterialMueble update(MaterialMueble mm) {
+        // Obtenemos el material asociado
+        Material material = materialRepository.findById(mm.getMaterial().getId())
+                .orElseThrow(() -> new RuntimeException("Material no encontrado id: " + mm.getMaterial().getId()));
+
+        // Obtenemos el viejo MaterialMueble si existe
+        Long vieja = 0L;
+        MaterialMueble existente = null;
+        if (mm.getId() != null) {
+            existente = materialMuebleRepository.findById(mm.getId())
+                    .orElseThrow(() -> new RuntimeException("Relación no encontrada id: " + mm.getId()));
+            vieja = existente.getCantidadUtilizada();
+        }
+
+        Long nueva = mm.getCantidadUtilizada();
+        Long delta = nueva - vieja;
+
+        System.out.println("[MM‑UPDATE] id=" + mm.getId() + " viejo=" + vieja + " nueva=" + nueva + " delta=" + delta);
+
+        if (delta != 0) {
+            // Verificamos si hay stock suficiente
+            if (delta > 0 && material.getStockActual() < delta) {
+                throw new RuntimeException("Stock insuficiente para el material: " + material.getNombre());
+            }
+
+            // Ajustamos stock
+            material.setStockActual(material.getStockActual() - delta);
+            materialRepository.save(material);
+        }
+
+        // Reutilizamos la entidad existente si aplica
+        if (existente != null) {
+            existente.setCantidadUtilizada(nueva);
+            existente.setMaterial(material);
+            return materialMuebleRepository.save(existente);
+        } else {
+            mm.setMaterial(material);
+            return materialMuebleRepository.save(mm);
+        }
     }
 }

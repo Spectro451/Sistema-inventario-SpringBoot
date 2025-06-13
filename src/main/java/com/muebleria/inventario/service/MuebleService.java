@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +32,9 @@ public class MuebleService {
     MaterialMuebleService materialMuebleService;
 
     @Autowired
+    MaterialMuebleRepository materialMuebleRepository;
+
+    @Autowired
     MaterialRepository materialRepository;
 
     public List<Mueble> findAll() {
@@ -37,9 +42,43 @@ public class MuebleService {
         return muebleRepository.findAll();
     }
 
-    public Optional<Mueble> findById(Long id) {
+    public MuebleDTO findById(Long id) {
+        Mueble mueble = muebleRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mueble no encontrado con ID: " + id));
 
-        return muebleRepository.findById(id);
+        MuebleDTO muebleDTO = new MuebleDTO();
+        muebleDTO.setId(mueble.getId());
+        muebleDTO.setNombre(mueble.getNombre());
+        muebleDTO.setDescripcion(mueble.getDescripcion());
+        muebleDTO.setPrecioVenta(mueble.getPrecioVenta());
+        muebleDTO.setStock(mueble.getStock());
+
+        if (mueble.getMaterialMuebles() != null) {
+            List<MaterialMuebleDTO> mmDTOs = mueble.getMaterialMuebles().stream().map(mm -> {
+                MaterialMuebleDTO mmDTO = new MaterialMuebleDTO();
+                mmDTO.setId(mm.getId());
+                mmDTO.setCantidadUtilizada(mm.getCantidadUtilizada());
+
+                Material material = mm.getMaterial();
+                MaterialSimpleDTO materialDTO = new MaterialSimpleDTO();
+                materialDTO.setId(material.getId());
+                materialDTO.setNombre(material.getNombre());
+                materialDTO.setTipo(material.getTipo().toString());
+                materialDTO.setDescripcion(material.getDescripcion());
+                materialDTO.setUnidadDeMedida(material.getUnidadDeMedida());
+                materialDTO.setStockActual(material.getStockActual());
+
+                mmDTO.setMaterial(materialDTO);
+
+                return mmDTO;
+            }).collect(Collectors.toList());
+
+            muebleDTO.setMaterialMuebles(mmDTOs);
+        } else {
+            muebleDTO.setMaterialMuebles(new ArrayList<>());
+        }
+
+        return muebleDTO;
     }
 
     @Transactional
@@ -63,41 +102,78 @@ public class MuebleService {
     }
 
     @Transactional
-    public Mueble update(Long id, Mueble muebleActualizado) {
-        Mueble muebleActual = muebleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No se encontró el mueble"));
+    public Mueble update(Long id, Mueble dto) {
+        // 1) Cargo entidad y guardo stock viejo
+        Mueble m = muebleRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mueble no encontrado id: " + id));
+        Long stockViejo = m.getStock();
+        Long stockNuevo = dto.getStock();
 
-        Long stockViejo = muebleActual.getStock();
-        Long stockNuevo = muebleActualizado.getStock();
+        // 2) Actualizo campos básicos
+        m.setNombre(dto.getNombre());
+        m.setDescripcion(dto.getDescripcion());
+        m.setPrecioVenta(dto.getPrecioVenta());
+        m.setStock(stockNuevo);
 
-        // Actualizar campos básicos
-        muebleActual.setNombre(muebleActualizado.getNombre());
-        muebleActual.setDescripcion(muebleActualizado.getDescripcion());
-        muebleActual.setPrecioVenta(muebleActualizado.getPrecioVenta());
-        muebleActual.setStock(stockNuevo);
+        // 3) Preparo mapas y listas para relaciones
+        Map<Long, MaterialMueble> existentes = m.getMaterialMuebles().stream()
+                .collect(Collectors.toMap(MaterialMueble::getId, Function.identity()));
+        List<MaterialMueble> procesados = new ArrayList<>();
 
-        Long diferencia = stockNuevo - stockViejo;
+        // 4) Actualizo o creo cada MaterialMueble del DTO
+        for (MaterialMueble mmDto : dto.getMaterialMuebles()) {
+            if (mmDto.getId() != null && existentes.containsKey(mmDto.getId())) {
+                // 4a) actualizar existente y ajustar stock si cambió la cantidad usada
+                MaterialMueble orig = existentes.remove(mmDto.getId());
+                long vieja = orig.getCantidadUtilizada();
+                long nueva = mmDto.getCantidadUtilizada();
+                long diff = nueva - vieja;
+                Material mat = orig.getMaterial();
 
-        if (diferencia != 0) {
-            for (MaterialMueble mm : muebleActual.getMaterialMuebles()) {
-                Material material = mm.getMaterial();
-                Long cantidadPorUnidad = mm.getCantidadUtilizada();
-                Long ajuste = cantidadPorUnidad * diferencia;
-
-                // Si diferencia > 0, restamos material (fabricamos más muebles)
-                // Si diferencia < 0, sumamos material (menos muebles, materiales liberados)
-                Long nuevoStock = material.getStockActual() - ajuste;
-
-                if (nuevoStock < 0) {
-                    throw new RuntimeException("Stock insuficiente para material: " + material.getNombre());
+                if (diff != 0 && stockNuevo > 0) {
+                    long ajuste = diff * stockNuevo;
+                    if (ajuste > 0 && mat.getStockActual() < ajuste) {
+                        throw new RuntimeException("Stock insuficiente de " + mat.getNombre() + " para el ajuste");
+                    }
+                    mat.setStockActual(mat.getStockActual() - ajuste);
+                    materialRepository.save(mat);
                 }
 
-                material.setStockActual(nuevoStock);
-                materialRepository.save(material);
+                orig.setCantidadUtilizada(nueva);
+                procesados.add(materialMuebleService.update(orig));
+            } else if (mmDto.getCantidadUtilizada() > 0) {
+                // 4b) crear nuevo
+                mmDto.setMueble(m);
+                procesados.add(materialMuebleService.update(mmDto));
+            }
+            // si viene con id y cantidad=0, simplemente no lo añadimos y se eliminará
+        }
+
+        // 5) Elimino las relaciones que quedaron fuera
+        existentes.values().forEach(materialMuebleRepository::delete);
+
+        // 6) Reemplazo la colección en el mueble
+        m.getMaterialMuebles().clear();
+        m.getMaterialMuebles().addAll(procesados);
+
+        // 7) Ajusto stock de materiales por cambio de unidades del mueble
+        long unidadesDiff = stockNuevo - stockViejo;
+        if (unidadesDiff != 0) {
+            for (MaterialMueble mm : procesados) {
+                Material mat = mm.getMaterial();
+                long consumo = mm.getCantidadUtilizada() * unidadesDiff;
+                if (consumo > 0 && mat.getStockActual() < consumo) {
+                    throw new RuntimeException(
+                            "Stock insuficiente de " + mat.getNombre() +
+                                    " para producir " + unidadesDiff + " unidades");
+                }
+                mat.setStockActual(mat.getStockActual() - consumo);
+                materialRepository.save(mat);
             }
         }
 
-        return muebleRepository.save(muebleActual);
+        // 8) Guardo y retorno
+        return muebleRepository.save(m);
     }
 
     @Transactional

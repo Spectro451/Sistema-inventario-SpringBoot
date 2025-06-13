@@ -1,6 +1,7 @@
 package com.muebleria.inventario.controller;
 
 import com.muebleria.inventario.dto.MuebleDTO;
+import com.muebleria.inventario.entidad.MaterialMueble;
 import com.muebleria.inventario.entidad.Mueble;
 import com.muebleria.inventario.service.MuebleService;
 import org.apache.coyote.Response;
@@ -26,8 +27,9 @@ public class MuebleController {
 //    }
 
     @GetMapping("/{id}")
-    public Optional<Mueble> getByID(@PathVariable Long id) {
-        return muebleService.findById(id);
+    public ResponseEntity<MuebleDTO> getByID(@PathVariable Long id) {
+        MuebleDTO muebleDTO = muebleService.findById(id);
+        return ResponseEntity.ok(muebleDTO);
     }
 
     @PostMapping
@@ -41,16 +43,18 @@ public class MuebleController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Mueble> updateMueble(@RequestBody Mueble muebleActualizado, @PathVariable Long id) {
-        System.out.println("PUT /mueble/" + id + " recibido con datos: " + muebleActualizado.getNombre());
-        try {
-            Mueble mueble = muebleService.update(id, muebleActualizado);
-            System.out.println("Mueble actualizado exitosamente");
-            return ResponseEntity.ok(mueble);
-        } catch (RuntimeException e) {
-            System.err.println("Error al actualizar: " + e.getMessage());
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<?> updateMueble(@PathVariable Long id, @RequestBody Mueble dto) {
+        System.out.println("➡️ Recibido mueble ID: " + dto.getId());
+        System.out.println("➡️ Stock: " + dto.getStock());
+        System.out.println("➡️ Materiales: ");
+        for (MaterialMueble mm : dto.getMaterialMuebles()) {
+            System.out.println("  🔹 ID MaterialMueble: " + mm.getId() +
+                    ", Material ID: " + mm.getMaterial().getId() +
+                    ", cantidad usada: " + mm.getCantidadUtilizada());
         }
+
+        Mueble actualizado = muebleService.update(id, dto);
+        return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")

@@ -7,15 +7,16 @@ import com.muebleria.inventario.entidad.Mueble;
 import com.muebleria.inventario.entidad.Venta;
 import com.muebleria.inventario.entidad.VentaMueble;
 import com.muebleria.inventario.repository.MuebleRepository;
+import com.muebleria.inventario.repository.VentaMuebleRepository;
 import com.muebleria.inventario.repository.VentaRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class VentaService {
@@ -24,6 +25,12 @@ public class VentaService {
 
     @Autowired
     private VentaMuebleService ventaMuebleService;
+
+    @Autowired
+    MuebleRepository muebleRepository;
+
+    @Autowired
+    VentaMuebleRepository ventaMuebleRepository;
 
     public List<Venta> findAll() {
         return ventaRepository.findAll();
@@ -90,5 +97,91 @@ public class VentaService {
             dto.setVentaMuebles(vmDTOs);
             return dto;
         }).toList();
+    }
+
+    @Transactional
+    public Venta update(Long id, Venta dto) {
+        // 1) Cargo la venta existente y detalles actuales
+        Venta venta = ventaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Venta no encontrada id: " + id));
+
+        venta.setFecha(dto.getFecha());
+
+        // Mapa de detalles existentes (id -> VentaMueble)
+        Map<Long, VentaMueble> existentes = venta.getVentaMuebles().stream()
+                .collect(Collectors.toMap(VentaMueble::getId, Function.identity()));
+
+        List<VentaMueble> procesados = new ArrayList<>();
+
+        long totalNuevo = 0L;
+
+        // 2) Recorro los detalles enviados para actualizar o crear
+        for (VentaMueble vmDto : dto.getVentaMuebles()) {
+            if (vmDto.getId() != null && existentes.containsKey(vmDto.getId())) {
+                // 2a) Actualizar detalle existente y ajustar stock
+                VentaMueble orig = existentes.remove(vmDto.getId());
+                long cantidadVieja = orig.getCantidad();
+                long cantidadNueva = vmDto.getCantidad();
+                long diff = cantidadNueva - cantidadVieja;
+
+                Mueble mueble = muebleRepository.findById(orig.getMueble().getId())
+                        .orElseThrow(() -> new RuntimeException("Mueble no encontrado id: " + orig.getMueble().getId()));
+
+                if (diff > 0 && mueble.getStock() < diff) {
+                    throw new RuntimeException("Stock insuficiente para mueble: " + mueble.getNombre());
+                }
+
+                mueble.setStock(mueble.getStock() - (int) diff);
+                muebleRepository.save(mueble);
+
+                // Actualizar campos en el detalle
+                orig.setCantidad(cantidadNueva);
+                orig.setPrecioUnitario(mueble.getPrecioVenta());
+                orig.setSubtotal(mueble.getPrecioVenta() * cantidadNueva);
+                procesados.add(ventaMuebleRepository.save(orig));
+                totalNuevo += orig.getSubtotal();
+
+            } else if (vmDto.getCantidad() > 0) {
+                // 2b) Crear nuevo detalle
+                Mueble mueble = muebleRepository.findById(vmDto.getMueble().getId())
+                        .orElseThrow(() -> new RuntimeException("Mueble no encontrado id: " + vmDto.getMueble().getId()));
+
+                if (mueble.getStock() < vmDto.getCantidad()) {
+                    throw new RuntimeException("Stock insuficiente para mueble: " + mueble.getNombre());
+                }
+
+                mueble.setStock(mueble.getStock() - vmDto.getCantidad());
+                muebleRepository.save(mueble);
+
+                vmDto.setVenta(venta);
+                vmDto.setPrecioUnitario(mueble.getPrecioVenta());
+                vmDto.setSubtotal(mueble.getPrecioVenta() * vmDto.getCantidad());
+
+                VentaMueble nuevo = ventaMuebleRepository.save(vmDto);
+                procesados.add(nuevo);
+                totalNuevo += nuevo.getSubtotal();
+            }
+            // si vmDto tiene id y cantidad=0, lo eliminaremos en siguiente paso
+        }
+
+        // 3) Eliminar detalles que no vienen en dto (ya no existen)
+        existentes.values().forEach(detalle -> {
+            // Antes de eliminar, devolver stock del mueble
+            Mueble mueble = muebleRepository.findById(detalle.getMueble().getId())
+                    .orElseThrow(() -> new RuntimeException("Mueble no encontrado id: " + detalle.getMueble().getId()));
+
+            mueble.setStock(mueble.getStock() + detalle.getCantidad());
+            muebleRepository.save(mueble);
+
+            ventaMuebleRepository.delete(detalle);
+        });
+
+        // 4) Actualizar la lista y total en la venta
+        venta.getVentaMuebles().clear();
+        venta.getVentaMuebles().addAll(procesados);
+        venta.setTotal(totalNuevo);
+
+        // 5) Guardar y devolver
+        return ventaRepository.save(venta);
     }
 }

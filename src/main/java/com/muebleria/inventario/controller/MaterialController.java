@@ -3,6 +3,7 @@ package com.muebleria.inventario.controller;
 import com.muebleria.inventario.dto.MaterialDTO;
 import com.muebleria.inventario.dto.MuebleDTO;
 import com.muebleria.inventario.entidad.Material;
+import com.muebleria.inventario.entidad.TipoMaterial;
 import com.muebleria.inventario.service.MaterialService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -49,5 +50,15 @@ public class MaterialController {
     public ResponseEntity<List<MaterialDTO>> listarMateriales() {
         List<MaterialDTO> listaDTO = materialService.mostrarTodosConRelacionesSimples();
         return ResponseEntity.ok(listaDTO);
+    }
+    @GetMapping("/tipos")
+    public ResponseEntity<TipoMaterial[]> obtenerTiposMaterial() {
+        return ResponseEntity.ok(TipoMaterial.values());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Material> actualizarMaterial(@PathVariable Long id, @RequestBody Material material) {
+        Material actualizado = materialService.actualizarMaterial(id, material);
+        return ResponseEntity.ok(actualizado);
     }
 }

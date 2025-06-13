@@ -217,7 +217,9 @@ public class MuebleService {
             muebleDTO.setStock(mueble.getStock());
 
             if (mueble.getMaterialMuebles() != null) {
-                List<MaterialMuebleDTO> mmDTOs = mueble.getMaterialMuebles().stream().map(mm -> {
+                List<MaterialMuebleDTO> mmDTOs = mueble.getMaterialMuebles().stream()
+                        .filter(mm -> mm.getCantidadUtilizada() > 0) // <--- solo los que tienen cantidad > 0
+                        .map(mm -> {
                     MaterialMuebleDTO mmDTO = new MaterialMuebleDTO();
                     mmDTO.setId(mm.getId());
                     mmDTO.setCantidadUtilizada(mm.getCantidadUtilizada());

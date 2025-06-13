@@ -70,4 +70,29 @@ public class ProveedorMaterialesService {
         proveedorMaterialesRepository.deleteById(id);
     }
 
+    @Transactional
+    public ProveedorMateriales guardarOActualizar(ProveedorMateriales pm) {
+        Long proveedorId = pm.getProveedor().getId();
+        Long materialId = pm.getMaterial().getId();
+
+        Proveedor proveedor = proveedorRepository.findById(proveedorId)
+                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado con id: " + proveedorId));
+
+        Material material = materialRepository.findById(materialId)
+                .orElseThrow(() -> new RuntimeException("Material no encontrado con id: " + materialId));
+
+        // Buscar si ya existe la relación
+        ProveedorMateriales pmExistente = proveedorMaterialesRepository
+                .findByProveedor_IdAndMaterial_Id(proveedorId, materialId);
+
+        if (pmExistente != null) {
+            pmExistente.setCostoUnitario(pm.getCostoUnitario());
+            return proveedorMaterialesRepository.save(pmExistente);
+        } else {
+            pm.setProveedor(proveedor);
+            pm.setMaterial(material);
+            return proveedorMaterialesRepository.save(pm);
+        }
+    }
+
 }

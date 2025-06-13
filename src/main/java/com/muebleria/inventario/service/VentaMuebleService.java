@@ -4,6 +4,7 @@ import com.muebleria.inventario.entidad.Mueble;
 import com.muebleria.inventario.entidad.VentaMueble;
 import com.muebleria.inventario.repository.MuebleRepository;
 import com.muebleria.inventario.repository.VentaMuebleRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -68,5 +69,51 @@ public class VentaMuebleService {
             throw new RuntimeException("VentaMueble con id " + id + " no existe.");
         }
         ventaMuebleRepository.deleteById(id);
+    }
+
+    @Transactional
+    public VentaMueble guardarOVerificar(VentaMueble vm) {
+        Long muebleId = vm.getMueble().getId();
+        Long cantidadNueva = vm.getCantidad();
+
+        Mueble mueble = muebleRepository.findById(muebleId)
+                .orElseThrow(() -> new RuntimeException("Mueble no encontrado con ID: " + muebleId));
+
+        VentaMueble vmExistente = null;
+        if (vm.getId() != null) {
+            vmExistente = ventaMuebleRepository.findById(vm.getId()).orElse(null);
+        } else {
+            vmExistente = ventaMuebleRepository.findByVentaIdAndMuebleId(vm.getVenta().getId(), muebleId).orElse(null);
+        }
+
+        Long cantidadVieja = (vmExistente != null) ? vmExistente.getCantidad() : 0L;
+        Long diferencia = cantidadNueva - cantidadVieja;
+
+        if (diferencia > 0 && mueble.getStock() < diferencia) {
+            throw new RuntimeException("Stock insuficiente del mueble: " + mueble.getNombre());
+        }
+
+        // Ajustar stock según diferencia
+        mueble.setStock(mueble.getStock() - diferencia);
+        muebleRepository.save(mueble);
+
+        Long precioUnitario = mueble.getPrecioVenta();
+        Long subtotal = precioUnitario * cantidadNueva;
+
+        vm.setPrecioUnitario(precioUnitario);
+        vm.setSubtotal(subtotal);
+        vm.setMueble(mueble);
+
+        return ventaMuebleRepository.save(vm);
+    }
+
+    @Transactional
+    public void eliminar(VentaMueble vm) {
+        // Devolver stock
+        Mueble mueble = vm.getMueble();
+        mueble.setStock(mueble.getStock() + vm.getCantidad());
+        muebleRepository.save(mueble);
+
+        ventaMuebleRepository.delete(vm);
     }
 }

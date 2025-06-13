@@ -4,7 +4,10 @@ import com.muebleria.inventario.dto.MaterialDTO;
 import com.muebleria.inventario.dto.MaterialMuebleSimpleDTO;
 import com.muebleria.inventario.dto.ProveedorMaterialSimpleDTO;
 import com.muebleria.inventario.entidad.Material;
+import com.muebleria.inventario.exception.ResourceNotFoundException;
 import com.muebleria.inventario.repository.MaterialRepository;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,9 +21,8 @@ public class MaterialService {
     @Autowired
     private MaterialRepository materialRepository;
 
-    public List<Material> mostrarTodos() {
-        return materialRepository.findAll();
-    }
+
+
 
     public Optional<Material> buscarPorId(Long id) {
         return materialRepository.findById(id);
@@ -76,5 +78,19 @@ public class MaterialService {
 
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public Material actualizarMaterial(Long id, Material materialActualizado) {
+        Material material = materialRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Material no encontrado"));
+
+        material.setNombre(materialActualizado.getNombre());
+        material.setTipo(materialActualizado.getTipo());
+        material.setDescripcion(materialActualizado.getDescripcion());
+        material.setUnidadDeMedida(materialActualizado.getUnidadDeMedida());
+        material.setStockActual(materialActualizado.getStockActual());
+
+        return materialRepository.save(material);
     }
 }

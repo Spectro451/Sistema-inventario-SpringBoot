@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface VentaMuebleRepository extends JpaRepository<VentaMueble, Long> {
@@ -13,4 +14,6 @@ public interface VentaMuebleRepository extends JpaRepository<VentaMueble, Long> 
 
 
     List<VentaMueble> findByVentaId(Long ventaId);
+
+    Optional<VentaMueble> findByVentaIdAndMuebleId(Long ventaId, Long muebleId);
 }

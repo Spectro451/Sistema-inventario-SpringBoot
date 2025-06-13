@@ -68,6 +68,7 @@ public class MuebleController {
     }
     @GetMapping
     public List<MuebleDTO> listarMuebles() {
+
         return muebleService.findAllDTO();
     }
 }

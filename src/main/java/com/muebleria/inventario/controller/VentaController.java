@@ -57,4 +57,15 @@ public class VentaController {
     public List<VentaDTO> listarVentas() {
         return ventaService.findAllDTO();
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Venta> actualizarVenta(@PathVariable Long id, @RequestBody Venta venta) {
+        try {
+            Venta ventaActualizada = ventaService.update(id, venta);
+            return ResponseEntity.ok(ventaActualizada);
+        } catch (RuntimeException e) {
+            // Aquí puedes manejar errores específicos y devolver diferentes códigos HTTP si quieres
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(null);
+        }
+    }
 }

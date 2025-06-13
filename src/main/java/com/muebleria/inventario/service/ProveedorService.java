@@ -135,4 +135,33 @@ public class ProveedorService {
             return proveedorDTO;
         }).collect(Collectors.toList());
     }
+
+    @Transactional
+    public Proveedor actualizarProveedor(Long id, Proveedor proveedorActualizado) {
+        Proveedor proveedorExistente = proveedorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado con id: " + id));
+
+        proveedorExistente.setNombre(proveedorActualizado.getNombre());
+        proveedorExistente.setTelefono(proveedorActualizado.getTelefono());
+        proveedorExistente.setCorreo(proveedorActualizado.getCorreo());
+        proveedorExistente.setDireccion(proveedorActualizado.getDireccion());
+
+        // Delegar la actualización de proveedorMateriales
+        if (proveedorActualizado.getProveedorMateriales() != null) {
+            // Limpiar relaciones actuales
+            proveedorExistente.getProveedorMateriales().clear();
+
+            // Guardar cada relación con el servicio dedicado (puede manejar actualización, creación)
+            List<ProveedorMateriales> nuevasRelaciones = new ArrayList<>();
+            for (ProveedorMateriales pm : proveedorActualizado.getProveedorMateriales()) {
+                pm.setProveedor(proveedorExistente); // aseguramos la referencia
+                ProveedorMateriales pmGuardado = proveedorMaterialesService.guardarOActualizar(pm);
+                nuevasRelaciones.add(pmGuardado);
+            }
+
+            proveedorExistente.getProveedorMateriales().addAll(nuevasRelaciones);
+        }
+
+        return proveedorRepository.save(proveedorExistente);
+    }
 }

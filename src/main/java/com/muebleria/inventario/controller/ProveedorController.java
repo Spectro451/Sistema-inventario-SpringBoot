@@ -55,4 +55,13 @@ public class ProveedorController {
     public List<ProveedorDTO> listarProveedores() {
         return proveedorService.findAllDTO();
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Proveedor> actualizarProveedor(
+            @PathVariable Long id,
+            @RequestBody Proveedor proveedorActualizado) {
+
+        Proveedor proveedor = proveedorService.actualizarProveedor(id, proveedorActualizado);
+        return ResponseEntity.ok(proveedor);
+    }
 }

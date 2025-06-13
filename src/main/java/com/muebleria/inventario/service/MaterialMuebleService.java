@@ -64,5 +64,4 @@ public class MaterialMuebleService {
         }
         materialRepository.deleteById(id);
     }
-
 }

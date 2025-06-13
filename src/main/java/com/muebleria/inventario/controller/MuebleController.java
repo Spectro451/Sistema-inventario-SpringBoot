@@ -14,6 +14,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/mueble")
+@CrossOrigin(origins = "http://localhost:4200")
 public class MuebleController {
 
     @Autowired
@@ -41,10 +42,13 @@ public class MuebleController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Mueble> updateMueble(@RequestBody Mueble muebleActualizado, @PathVariable Long id) {
-        try{
+        System.out.println("PUT /mueble/" + id + " recibido con datos: " + muebleActualizado.getNombre());
+        try {
             Mueble mueble = muebleService.update(id, muebleActualizado);
+            System.out.println("Mueble actualizado exitosamente");
             return ResponseEntity.ok(mueble);
         } catch (RuntimeException e) {
+            System.err.println("Error al actualizar: " + e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }

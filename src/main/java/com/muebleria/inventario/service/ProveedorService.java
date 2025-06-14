@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -138,30 +140,49 @@ public class ProveedorService {
 
     @Transactional
     public Proveedor actualizarProveedor(Long id, Proveedor proveedorActualizado) {
-        Proveedor proveedorExistente = proveedorRepository.findById(id)
+        Proveedor existente = proveedorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado con id: " + id));
 
-        proveedorExistente.setNombre(proveedorActualizado.getNombre());
-        proveedorExistente.setTelefono(proveedorActualizado.getTelefono());
-        proveedorExistente.setCorreo(proveedorActualizado.getCorreo());
-        proveedorExistente.setDireccion(proveedorActualizado.getDireccion());
+        // 1. Actualiza campos simples
+        existente.setNombre(proveedorActualizado.getNombre());
+        existente.setTelefono(proveedorActualizado.getTelefono());
+        existente.setCorreo(proveedorActualizado.getCorreo());
+        existente.setDireccion(proveedorActualizado.getDireccion());
 
-        // Delegar la actualización de proveedorMateriales
+        // 2. Si vienen relaciones a Materiales
         if (proveedorActualizado.getProveedorMateriales() != null) {
-            // Limpiar relaciones actuales
-            proveedorExistente.getProveedorMateriales().clear();
+            // A. Map de relaciones existentes por id
+            Map<Long, ProveedorMateriales> mapExistentes = existente.getProveedorMateriales().stream()
+                    .collect(Collectors.toMap(ProveedorMateriales::getId, Function.identity()));
 
-            // Guardar cada relación con el servicio dedicado (puede manejar actualización, creación)
-            List<ProveedorMateriales> nuevasRelaciones = new ArrayList<>();
-            for (ProveedorMateriales pm : proveedorActualizado.getProveedorMateriales()) {
-                pm.setProveedor(proveedorExistente); // aseguramos la referencia
-                ProveedorMateriales pmGuardado = proveedorMaterialesService.guardarOActualizar(pm);
-                nuevasRelaciones.add(pmGuardado);
+            List<ProveedorMateriales> procesados = new ArrayList<>();
+
+            // B. Para cada DTO de relación
+            for (ProveedorMateriales pmDto : proveedorActualizado.getProveedorMateriales()) {
+                if (pmDto.getId() != null && mapExistentes.containsKey(pmDto.getId())) {
+                    // 2.1 Actualizar el existente
+                    ProveedorMateriales orig = mapExistentes.remove(pmDto.getId());
+                    orig.setCostoUnitario(pmDto.getCostoUnitario());
+                    procesados.add(proveedorMaterialesService.guardarOActualizar(orig));
+                } else {
+                    // 2.2 Crear nuevo (o si no existía)
+                    pmDto.setProveedor(existente);
+                    ProveedorMateriales creado = proveedorMaterialesService.guardarOActualizar(pmDto);
+                    procesados.add(creado);
+                }
             }
 
-            proveedorExistente.getProveedorMateriales().addAll(nuevasRelaciones);
+            // C. Eliminar las relaciones que quedaron fuera del DTO
+            for (ProveedorMateriales sobrante : mapExistentes.values()) {
+                proveedorMaterialesRepository.delete(sobrante);
+            }
+
+            // D. Asigna la lista procesada (sin clear ni recrear todos)
+            existente.getProveedorMateriales().clear();
+            existente.getProveedorMateriales().addAll(procesados);
         }
 
-        return proveedorRepository.save(proveedorExistente);
+        // 3. Guarda el proveedor y retorna
+        return proveedorRepository.save(existente);
     }
 }

@@ -117,6 +117,7 @@ public class MuebleService {
 
         // 3) Preparo mapas y listas para relaciones
         Map<Long, MaterialMueble> existentes = m.getMaterialMuebles().stream()
+                .filter(mm -> mm.getId() != null)
                 .collect(Collectors.toMap(MaterialMueble::getId, Function.identity()));
         List<MaterialMueble> procesados = new ArrayList<>();
 
@@ -141,12 +142,39 @@ public class MuebleService {
 
                 orig.setCantidadUtilizada(nueva);
                 procesados.add(materialMuebleService.update(orig));
+
+            } else if (mmDto.getId() != null && !existentes.containsKey(mmDto.getId())) {
+                // ⚠️ CASO CRÍTICO: relación con id enviada pero ya no existe en mueble
+                // → Buscar en repositorio por si está huérfana y restaurarla
+                MaterialMueble posibleHuérfano = materialMuebleRepository.findById(mmDto.getId()).orElse(null);
+                if (posibleHuérfano != null) {
+                    long vieja = posibleHuérfano.getCantidadUtilizada();
+                    long nueva = mmDto.getCantidadUtilizada();
+                    long diff = nueva - vieja;
+                    Material mat = posibleHuérfano.getMaterial();
+
+                    if (diff != 0 && stockNuevo > 0) {
+                        long ajuste = diff * stockNuevo;
+                        if (ajuste > 0 && mat.getStockActual() < ajuste) {
+                            throw new RuntimeException("Stock insuficiente de " + mat.getNombre() + " para el ajuste");
+                        }
+                        mat.setStockActual(mat.getStockActual() - ajuste);
+                        materialRepository.save(mat);
+                    }
+
+                    posibleHuérfano.setCantidadUtilizada(nueva);
+                    posibleHuérfano.setMueble(m); // re-asociar mueble por si falta
+                    procesados.add(materialMuebleService.update(posibleHuérfano));
+                } else {
+                    // Relación con id no existe ni en BD: ignorar o lanzar error
+                    throw new RuntimeException("MaterialMueble con id=" + mmDto.getId() + " no existe");
+                }
+
             } else if (mmDto.getCantidadUtilizada() > 0) {
                 // 4b) crear nuevo
                 mmDto.setMueble(m);
                 procesados.add(materialMuebleService.update(mmDto));
             }
-            // si viene con id y cantidad=0, simplemente no lo añadimos y se eliminará
         }
 
         // 5) Elimino las relaciones que quedaron fuera

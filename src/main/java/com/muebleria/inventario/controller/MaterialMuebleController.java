@@ -39,7 +39,7 @@ public class MaterialMuebleController {
 
     @PostMapping
     public MaterialMueble save(@RequestBody MaterialMueble materialMueble) {
-        materialMuebleService.guardar(materialMueble);
+        materialMuebleService.guardar(materialMueble, 1L); // usamos 1 unidad como base
         return materialMueble;
     }
 

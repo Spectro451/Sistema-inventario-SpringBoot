@@ -89,15 +89,19 @@ public class MuebleService {
         if (!mueble.getVentaMuebles().isEmpty()) {
             throw new RuntimeException("No se puede borrar el mueble porque tiene ventas asociadas.");
         }
-        // Devolver el stock de materiales usados
+
+        Long stock = mueble.getStock(); // Obtenemos cuántas unidades del mueble hay
+
+        // Devolver al stock la cantidad total de materiales usados
         for (MaterialMueble mm : mueble.getMaterialMuebles()) {
             Material material = mm.getMaterial();
-            Long cantidad = mm.getCantidadUtilizada();
-            material.setStockActual(material.getStockActual() + cantidad);
+            Long cantidadPorUnidad = mm.getCantidadUtilizada();
+            Long cantidadTotal = cantidadPorUnidad * stock; // Total a devolver
+
+            material.setStockActual(material.getStockActual() + cantidadTotal);
             materialRepository.save(material);
         }
 
-        // Borrar el mueble (las relaciones se borran en cascada si está configurado)
         muebleRepository.delete(mueble);
     }
 
@@ -222,7 +226,7 @@ public class MuebleService {
             for (MaterialMueble mm : mueble.getMaterialMuebles()) {
                 mm.setId(null); // FORZAR creación NUEVA relación, ignorar cualquier id previo
                 mm.setMueble(muebleGuardado);
-                MaterialMueble guardado = materialMuebleService.guardar(mm); // Aquí se hace la validación y descuento stock
+                MaterialMueble guardado = materialMuebleService.guardar(mm, mueble.getStock()); // Aquí se hace la validación y descuento stock
                 relacionesGuardadas.add(guardado);
             }
         }

@@ -36,27 +36,28 @@ public class MaterialMuebleService {
         return materialMuebleRepository.findByMuebleId(muebleId);
     }
 
-    public MaterialMueble guardar(MaterialMueble materialMueble) {
+    public MaterialMueble guardar(MaterialMueble materialMueble, Long cantidadMuebles) {
         Long materialId = materialMueble.getMaterial().getId();
 
         Material material = materialRepository.findById(materialId)
                 .orElseThrow(() -> new RuntimeException("Material no encontrado id: " + materialId));
 
-        Long stockActual = material.getStockActual();
-        Long cantidadNecesaria = materialMueble.getCantidadUtilizada();
+        Long cantidadPorUnidad = materialMueble.getCantidadUtilizada();
+        Long cantidadTotal = cantidadPorUnidad * cantidadMuebles;
 
-        if (stockActual < cantidadNecesaria) {
+        if (material.getStockActual() < cantidadTotal) {
             throw new RuntimeException("Stock insuficiente de: " + material.getNombre()
-                    + ". Stock actual: " + stockActual + ", requerido: " + cantidadNecesaria);
+                    + ". Stock actual: " + material.getStockActual() + ", requerido: " + cantidadTotal);
         }
 
-        material.setStockActual(stockActual - cantidadNecesaria);
+        // Descontar el total necesario
+        material.setStockActual(material.getStockActual() - cantidadTotal);
         materialRepository.save(material);
 
+        // Guardar la relación (solo con cantidad por unidad)
         materialMueble.setMaterial(material);
 
         return materialMuebleRepository.save(materialMueble);
-
     }
 
     public void eliminar(Long id) {

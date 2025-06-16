@@ -127,6 +127,24 @@ public class MuebleService {
 
         // 4) Actualizo o creo cada MaterialMueble del DTO
         for (MaterialMueble mmDto : dto.getMaterialMuebles()) {
+            if (mmDto.getCantidadUtilizada() == 0) {
+                // Si la cantidad es 0 y la relación existe, devolver stock y eliminarla
+                if (mmDto.getId() != null && existentes.containsKey(mmDto.getId())) {
+                    MaterialMueble toDelete = existentes.remove(mmDto.getId());
+                    Material mat = toDelete.getMaterial();
+
+                    // Devolver stock según cantidad usada * stock del mueble
+                    long devolver = toDelete.getCantidadUtilizada() * stockNuevo;
+                    mat.setStockActual(mat.getStockActual() + devolver);
+                    materialRepository.save(mat);
+
+                    // Eliminar relación
+                    materialMuebleRepository.delete(toDelete);
+                }
+                // No agregar a procesados ni hacer nada más
+                continue;
+            }
+
             if (mmDto.getId() != null && existentes.containsKey(mmDto.getId())) {
                 // 4a) actualizar existente y ajustar stock si cambió la cantidad usada
                 MaterialMueble orig = existentes.remove(mmDto.getId());
@@ -149,7 +167,6 @@ public class MuebleService {
 
             } else if (mmDto.getId() != null && !existentes.containsKey(mmDto.getId())) {
                 // ⚠️ CASO CRÍTICO: relación con id enviada pero ya no existe en mueble
-                // → Buscar en repositorio por si está huérfana y restaurarla
                 MaterialMueble posibleHuérfano = materialMuebleRepository.findById(mmDto.getId()).orElse(null);
                 if (posibleHuérfano != null) {
                     long vieja = posibleHuérfano.getCantidadUtilizada();
@@ -170,7 +187,6 @@ public class MuebleService {
                     posibleHuérfano.setMueble(m); // re-asociar mueble por si falta
                     procesados.add(materialMuebleService.update(posibleHuérfano));
                 } else {
-                    // Relación con id no existe ni en BD: ignorar o lanzar error
                     throw new RuntimeException("MaterialMueble con id=" + mmDto.getId() + " no existe");
                 }
 

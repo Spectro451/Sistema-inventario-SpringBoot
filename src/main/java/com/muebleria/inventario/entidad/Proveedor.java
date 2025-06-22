@@ -1,11 +1,14 @@
 package com.muebleria.inventario.entidad;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +35,12 @@ public class Proveedor {
     @NotBlank(message = "La direccion es obligatoria")
     @Column(nullable = false)
     private String direccion;
+
+    @NotNull(message = "La fecha es obligatoria")
+    @Column(name = "fecha_pedido", nullable = false)
+    @JsonFormat(pattern = "dd/MM/yyyy")
+    @DateTimeFormat(pattern = "dd/MM/yyyy")
+    private LocalDate fechaPedido;
 
     @OneToMany(mappedBy = "proveedor", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference("proveedor-materiales")

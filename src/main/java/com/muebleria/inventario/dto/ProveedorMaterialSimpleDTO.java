@@ -6,5 +6,6 @@ import lombok.Data;
 public class ProveedorMaterialSimpleDTO {
     private Long id;
     private Long costoUnitario;
+    private Long cantidadSuministrada;
     private String nombreProveedor;
 }

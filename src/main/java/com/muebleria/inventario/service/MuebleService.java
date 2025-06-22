@@ -166,7 +166,7 @@ public class MuebleService {
                 procesados.add(materialMuebleService.update(orig));
 
             } else if (mmDto.getId() != null && !existentes.containsKey(mmDto.getId())) {
-                // ⚠️ CASO CRÍTICO: relación con id enviada pero ya no existe en mueble
+
                 MaterialMueble posibleHuérfano = materialMuebleRepository.findById(mmDto.getId()).orElse(null);
                 if (posibleHuérfano != null) {
                     long vieja = posibleHuérfano.getCantidadUtilizada();

@@ -31,4 +31,7 @@ public class ProveedorMateriales {
 
     @Column(name = "costo_unitario", nullable = false)
     private Long costoUnitario;
+
+    @Column(name = "cantidad_suministrada", nullable = false)
+    private Long cantidadSuministrada;
 }

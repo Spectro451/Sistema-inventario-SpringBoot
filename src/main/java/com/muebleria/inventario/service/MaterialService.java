@@ -56,6 +56,7 @@ public class MaterialService {
                         ProveedorMaterialSimpleDTO pms = new ProveedorMaterialSimpleDTO();
                         pms.setId(pm.getId());
                         pms.setCostoUnitario(pm.getCostoUnitario());
+                        pms.setCantidadSuministrada(pm.getCantidadSuministrada());
                         // Nombre del proveedor extraído de la entidad Proveedor
                         pms.setNombreProveedor(pm.getProveedor().getNombre());
                         return pms;

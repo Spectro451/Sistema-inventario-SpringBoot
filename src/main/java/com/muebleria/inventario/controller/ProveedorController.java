@@ -25,12 +25,15 @@ public class ProveedorController {
 //    }
 
     @PostMapping
-    public ResponseEntity<?> guardar(@RequestBody Proveedor proveedor) {
+    public ResponseEntity<?> guardar(@RequestBody ProveedorDTO proveedorDTO) {
         try {
-            Proveedor creado = proveedorService.guardarProveedor(proveedor);
-            return ResponseEntity.status(HttpStatus.CREATED).body(creado);
+            // Llamamos al método que recibe el DTO
+            Proveedor creado = proveedorService.guardarProveedor(proveedorDTO);
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(creado);
         } catch (RuntimeException ex) {
-            // Devolvemos el mensaje de la excepción para que Postman lo vea
+            // Devolvemos el mensaje de la excepción en caso de error de validación
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", ex.getMessage()));

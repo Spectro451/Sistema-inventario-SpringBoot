@@ -67,73 +67,79 @@ public class ProveedorService {
                 Material materialFinal;
 
                 if (materialDTO.getId() != null) {
-                    // Material ya existe, buscar y actualizar stock si es necesario
+                    // Material ya existe, buscar por ID
                     materialFinal = materialRepository.findById(materialDTO.getId())
                             .orElseThrow(() -> new RuntimeException(
                                     "Material no encontrado con id: " + materialDTO.getId()
                             ));
                 } else {
-                    // Crear nuevo material
-                    materialFinal = new Material();
-                    materialFinal.setNombre(materialDTO.getNombre());
+                    // Buscar material por nombre y tipo
+                    Optional<Material> materialExistente = materialRepository.findByNombreAndTipo(
+                            materialDTO.getNombre(),
+                            TipoMaterial.valueOf(materialDTO.getTipo().toUpperCase())
+                    );
 
-                    // Convertir String a TipoMaterial (enum)
-                    try {
-                        TipoMaterial tipoEnum = TipoMaterial.valueOf(materialDTO.getTipo().toUpperCase());
-                        materialFinal.setTipo(tipoEnum);
-                    } catch (IllegalArgumentException | NullPointerException e) {
-                        throw new RuntimeException("Tipo de material inválido o no especificado: " + materialDTO.getTipo());
+                    if (materialExistente.isPresent()) {
+                        materialFinal = materialExistente.get();
+                    } else {
+                        // Crear nuevo material
+                        materialFinal = new Material();
+                        materialFinal.setNombre(materialDTO.getNombre());
+
+                        try {
+                            TipoMaterial tipoEnum = TipoMaterial.valueOf(materialDTO.getTipo().toUpperCase());
+                            materialFinal.setTipo(tipoEnum);
+                        } catch (IllegalArgumentException | NullPointerException e) {
+                            throw new RuntimeException("Tipo de material inválido o no especificado: " + materialDTO.getTipo());
+                        }
+
+                        materialFinal.setDescripcion(materialDTO.getDescripcion());
+                        materialFinal.setUnidadDeMedida(materialDTO.getUnidadDeMedida());
+                        materialFinal.setStockActual(materialDTO.getStockActual() != null ? materialDTO.getStockActual() : 0L);
+
+                        materialFinal = materialRepository.save(materialFinal);
                     }
-
-                    materialFinal.setDescripcion(materialDTO.getDescripcion());
-                    materialFinal.setUnidadDeMedida(materialDTO.getUnidadDeMedida());
-                    materialFinal.setStockActual(materialDTO.getStockActual() != null ? materialDTO.getStockActual() : 0L);
-
-                    materialFinal = materialRepository.save(materialFinal);
                 }
 
                 // Verificar si ya existe la relación ProveedorMateriales para evitar duplicados
-                boolean existeRelacion = proveedorMaterialesRepository
-                        .existsByProveedor_IdAndMaterial_Id(proveedorGuardado.getId(), materialFinal.getId());
+                ProveedorMateriales existente = proveedorMaterialesRepository
+                        .findByProveedor_IdAndMaterial_Id(proveedorGuardado.getId(), materialFinal.getId());
 
-                if (existeRelacion) {
-                    ProveedorMateriales existente = proveedorMaterialesRepository
-                            .findByProveedor_IdAndMaterial_Id(proveedorGuardado.getId(), materialFinal.getId());
+                if (existente != null) {
+                    // Relación ya existe, sumar cantidades
 
                     Long cantidadAnterior = existente.getCantidadSuministrada() != null ? existente.getCantidadSuministrada() : 0L;
                     Long nuevaCantidad = pmDTO.getCantidadSuministrada() != null ? pmDTO.getCantidadSuministrada() : 0L;
 
-                    // Actualizar cantidad suministrada y stock si hay diferencia
-                    if (!cantidadAnterior.equals(nuevaCantidad)) {
-                        existente.setCantidadSuministrada(nuevaCantidad);
+                    // Sumamos la cantidad suministrada nueva a la anterior
+                    Long cantidadSumada = cantidadAnterior + nuevaCantidad;
+                    existente.setCantidadSuministrada(cantidadSumada);
 
-                        Long diferencia = nuevaCantidad - cantidadAnterior;
-                        Long nuevoStock = materialFinal.getStockActual() + diferencia;
-                        materialFinal.setStockActual(nuevoStock);
-                        materialRepository.save(materialFinal);
+                    // Actualizamos el stock del material sumando la nueva cantidad
+                    Long stockActual = materialFinal.getStockActual() != null ? materialFinal.getStockActual() : 0L;
+                    materialFinal.setStockActual(stockActual + nuevaCantidad);
+                    materialRepository.save(materialFinal);
 
-                        proveedorMaterialesRepository.save(existente);
-                    }
-
+                    proveedorMaterialesRepository.save(existente);
                     pmGuardados.add(existente);
-                    continue;
+
+                } else {
+                    // Crear la relación proveedor-material con costo unitario y cantidad suministrada
+                    ProveedorMateriales pmNuevo = new ProveedorMateriales();
+                    pmNuevo.setProveedor(proveedorGuardado);
+                    pmNuevo.setMaterial(materialFinal);
+                    pmNuevo.setCostoUnitario(pmDTO.getCostoUnitario());
+                    pmNuevo.setCantidadSuministrada(pmDTO.getCantidadSuministrada() != null ? pmDTO.getCantidadSuministrada() : 0L);
+
+                    // Actualizar stock sumando cantidad suministrada nueva
+                    Long stockActual = materialFinal.getStockActual() != null ? materialFinal.getStockActual() : 0L;
+                    Long cantidadSum = pmNuevo.getCantidadSuministrada();
+                    materialFinal.setStockActual(stockActual + cantidadSum);
+                    materialRepository.save(materialFinal);
+
+                    ProveedorMateriales pmResult = proveedorMaterialesService.guardar(pmNuevo);
+                    pmGuardados.add(pmResult);
                 }
-
-                // Crear la relación proveedor-material con costo unitario y cantidad suministrada
-                ProveedorMateriales pmNuevo = new ProveedorMateriales();
-                pmNuevo.setProveedor(proveedorGuardado);
-                pmNuevo.setMaterial(materialFinal);
-                pmNuevo.setCostoUnitario(pmDTO.getCostoUnitario());
-                pmNuevo.setCantidadSuministrada(pmDTO.getCantidadSuministrada() != null ? pmDTO.getCantidadSuministrada() : 0L);
-
-                // Actualizar stock sumando cantidad suministrada nueva
-                Long stockActual = materialFinal.getStockActual() != null ? materialFinal.getStockActual() : 0L;
-                Long cantidadSum = pmNuevo.getCantidadSuministrada();
-                materialFinal.setStockActual(stockActual + cantidadSum);
-                materialRepository.save(materialFinal);
-
-                ProveedorMateriales pmResult = proveedorMaterialesService.guardar(pmNuevo);
-                pmGuardados.add(pmResult);
             }
         }
 
@@ -144,11 +150,39 @@ public class ProveedorService {
         return proveedorGuardado;
     }
 
-    public void eliminarProveedor(Long id) {
-        if (!proveedorRepository.existsById(id)) {
-            throw new RuntimeException("Proveedor con id " + id + " no existe.");
+
+    @Transactional
+    public void eliminarProveedor(Long proveedorId) {
+        // Verificar existencia
+        if (!proveedorRepository.existsById(proveedorId)) {
+            throw new RuntimeException("Proveedor con id " + proveedorId + " no existe.");
         }
-        proveedorRepository.deleteById(id);
+
+        // Obtener todas las relaciones ProveedorMateriales para ese proveedor
+        List<ProveedorMateriales> relaciones = proveedorMaterialesRepository.findByProveedorId(proveedorId);
+
+        for (ProveedorMateriales pm : relaciones) {
+            Material material = pm.getMaterial();
+            Long cantidadSuministrada = pm.getCantidadSuministrada() != null ? pm.getCantidadSuministrada() : 0L;
+
+            // Restar stock
+            Long stockActual = material.getStockActual() != null ? material.getStockActual() : 0L;
+            Long nuevoStock = stockActual - cantidadSuministrada;
+
+            if (nuevoStock < 0) {
+                // Evitar stock negativo, poner en 0 y quizá loggear o lanzar excepción si quieres
+                nuevoStock = 0L;
+            }
+
+            material.setStockActual(nuevoStock);
+            materialRepository.save(material);
+
+            // Eliminar relación proveedor-material
+            proveedorMaterialesRepository.delete(pm);
+        }
+
+        // Finalmente eliminar proveedor
+        proveedorRepository.deleteById(proveedorId);
     }
 
     public List<ProveedorDTO> findAllDTO() {

@@ -85,23 +85,9 @@ public class MuebleService {
     public void delete(Long id) {
         Mueble mueble = muebleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mueble no encontrado con id: " + id));
-
         if (!mueble.getVentaMuebles().isEmpty()) {
             throw new RuntimeException("No se puede borrar el mueble porque tiene ventas asociadas.");
         }
-
-        Long stock = mueble.getStock(); // Obtenemos cuántas unidades del mueble hay
-
-        // Devolver al stock la cantidad total de materiales usados
-        for (MaterialMueble mm : mueble.getMaterialMuebles()) {
-            Material material = mm.getMaterial();
-            Long cantidadPorUnidad = mm.getCantidadUtilizada();
-            Long cantidadTotal = cantidadPorUnidad * stock; // Total a devolver
-
-            material.setStockActual(material.getStockActual() + cantidadTotal);
-            materialRepository.save(material);
-        }
-
         muebleRepository.delete(mueble);
     }
 

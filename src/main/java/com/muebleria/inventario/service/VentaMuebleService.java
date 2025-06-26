@@ -109,11 +109,6 @@ public class VentaMuebleService {
 
     @Transactional
     public void eliminar(VentaMueble vm) {
-        // Devolver stock
-        Mueble mueble = vm.getMueble();
-        mueble.setStock(mueble.getStock() + vm.getCantidad());
-        muebleRepository.save(mueble);
-
         ventaMuebleRepository.delete(vm);
     }
 }

@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -29,12 +30,16 @@ public class JwtUtil {
         return getClaims(token).getSubject();
     }
 
-    // ✅ Verifica si el token aún no ha expirado
-    public boolean isTokenValid(String token) {
-        return !getClaims(token).getExpiration().before(new Date());
+    public boolean validateToken(String token, UserDetails userDetails) {
+        String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
-    // ✅ Método interno que extrae todos los claims
+    // Revisar si el token expiró
+    private boolean isTokenExpired(String token) {
+        return getClaims(token).getExpiration().before(new Date());
+    }
+
     private Claims getClaims(String token) {
         return Jwts.parser()
                 .setSigningKey(KEY)

@@ -6,15 +6,15 @@ import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Data
-public class ProveedorDTO {
+public class PedidoDTO {
     private Long id;
-    private String nombre;
-    private String telefono;
-    private String correo;
-    private String direccion;
 
-    private List<ProveedorMaterialDTO> proveedorMateriales;
+    @NotNull(message = "La fecha de pedido es obligatoria")
+    @JsonFormat(pattern = "dd/MM/yyyy")
+    @DateTimeFormat(pattern = "dd/MM/yyyy")
+    private LocalDate fechaPedido;
+
+    private ProveedorDTO proveedor;
 }

@@ -36,12 +36,6 @@ public class Proveedor {
     @Column(nullable = false)
     private String direccion;
 
-    @NotNull(message = "La fecha es obligatoria")
-    @Column(name = "fecha_pedido", nullable = false)
-    @JsonFormat(pattern = "dd/MM/yyyy")
-    @DateTimeFormat(pattern = "dd/MM/yyyy")
-    private LocalDate fechaPedido;
-
     @OneToMany(mappedBy = "proveedor", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference("proveedor-materiales")
     @EqualsAndHashCode.Exclude

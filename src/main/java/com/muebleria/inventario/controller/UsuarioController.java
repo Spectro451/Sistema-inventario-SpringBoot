@@ -2,9 +2,11 @@ package com.muebleria.inventario.controller;
 
 import com.muebleria.inventario.entidad.Usuario;
 import com.muebleria.inventario.service.UsuarioService;
+import com.muebleria.inventario.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +19,12 @@ public class UsuarioController {
 
     @Autowired
     UsuarioService usuarioService;
+
+    @Autowired
+    private AuthenticationManager authManager;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @GetMapping
     public List<Usuario> getAllUsuarios() {

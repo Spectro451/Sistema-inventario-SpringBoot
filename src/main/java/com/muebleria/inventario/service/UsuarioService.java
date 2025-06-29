@@ -1,9 +1,15 @@
 package com.muebleria.inventario.service;
 
+import com.muebleria.inventario.entidad.Rol;
 import com.muebleria.inventario.entidad.Usuario;
 import com.muebleria.inventario.repository.UsuarioRepository;
 import com.muebleria.inventario.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -13,13 +19,19 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-public class UsuarioService {
+public class UsuarioService  implements UserDetailsService {
 
-    @Autowired
-    UsuarioRepository usuarioRepository;
-
-    @Autowired
+    private final UsuarioRepository usuarioRepository;
     private PasswordEncoder passwordEncoder;
+
+    public UsuarioService(UsuarioRepository usuarioRepository) {
+        this.usuarioRepository = usuarioRepository;
+    }
+
+    @Autowired
+    public void setPasswordEncoder(@Lazy PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Autowired
     JwtUtil jwtUtil;
@@ -38,7 +50,11 @@ public class UsuarioService {
 
     public Usuario guardar(Usuario usuario) {
         if (usuarioRepository.existsByNombre(usuario.getNombre())) {
-            throw new RuntimeException("El nombre de usuario ya esta en uso");
+            throw new RuntimeException("El nombre de usuario ya está en uso");
+        }
+        // Asignar rol por defecto si no viene asignado
+        if (usuario.getRol() == null) {
+            usuario.setRol(Rol.USUARIO);  // Asumiendo que Rol es un enum y USUARIO es el valor por defecto
         }
         String passwordEncryptada = passwordEncoder.encode(usuario.getPassword());
         usuario.setPassword(passwordEncryptada);
@@ -65,6 +81,16 @@ public class UsuarioService {
         return Map.of(
                 "token", token,
                 "rol", usuario.getRol().name()
+        );
+    }
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Usuario usuario = usuarioRepository.findByNombre(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
+        return new org.springframework.security.core.userdetails.User(
+                usuario.getNombre(),
+                usuario.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol()))
         );
     }
 }

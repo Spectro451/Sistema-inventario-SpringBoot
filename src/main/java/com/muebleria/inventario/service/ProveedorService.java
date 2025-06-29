@@ -45,109 +45,17 @@ public class ProveedorService {
     @Transactional
     public Proveedor guardarProveedor(ProveedorDTO proveedorDTO) {
 
-        // Mapeo básico ProveedorDTO -> Proveedor entidad
         Proveedor proveedor = new Proveedor();
         proveedor.setId(proveedorDTO.getId());
         proveedor.setNombre(proveedorDTO.getNombre());
         proveedor.setTelefono(proveedorDTO.getTelefono());
         proveedor.setCorreo(proveedorDTO.getCorreo());
         proveedor.setDireccion(proveedorDTO.getDireccion());
-        proveedor.setFechaPedido(proveedorDTO.getFechaPedido());
 
-        // Guardar proveedor primero para obtener ID
-        Proveedor proveedorGuardado = proveedorRepository.save(proveedor);
+        // Guardar proveedor sin materiales
+        proveedor.setProveedorMateriales(new ArrayList<>());
 
-        List<ProveedorMateriales> pmGuardados = new ArrayList<>();
-
-        if (proveedorDTO.getProveedorMateriales() != null) {
-
-            for (ProveedorMaterialDTO pmDTO : proveedorDTO.getProveedorMateriales()) {
-
-                MaterialSimpleDTO materialDTO = pmDTO.getMaterial();
-                Material materialFinal;
-
-                if (materialDTO.getId() != null) {
-                    // Material ya existe, buscar por ID
-                    materialFinal = materialRepository.findById(materialDTO.getId())
-                            .orElseThrow(() -> new RuntimeException(
-                                    "Material no encontrado con id: " + materialDTO.getId()
-                            ));
-                } else {
-                    // Buscar material por nombre y tipo
-                    Optional<Material> materialExistente = materialRepository.findByNombreAndTipo(
-                            materialDTO.getNombre(),
-                            TipoMaterial.valueOf(materialDTO.getTipo().toUpperCase())
-                    );
-
-                    if (materialExistente.isPresent()) {
-                        materialFinal = materialExistente.get();
-                    } else {
-                        // Crear nuevo material
-                        materialFinal = new Material();
-                        materialFinal.setNombre(materialDTO.getNombre());
-
-                        try {
-                            TipoMaterial tipoEnum = TipoMaterial.valueOf(materialDTO.getTipo().toUpperCase());
-                            materialFinal.setTipo(tipoEnum);
-                        } catch (IllegalArgumentException | NullPointerException e) {
-                            throw new RuntimeException("Tipo de material inválido o no especificado: " + materialDTO.getTipo());
-                        }
-
-                        materialFinal.setDescripcion(materialDTO.getDescripcion());
-                        materialFinal.setUnidadDeMedida(materialDTO.getUnidadDeMedida());
-                        materialFinal.setStockActual(materialDTO.getStockActual() != null ? materialDTO.getStockActual() : 0L);
-
-                        materialFinal = materialRepository.save(materialFinal);
-                    }
-                }
-
-                // Verificar si ya existe la relación ProveedorMateriales para evitar duplicados
-                ProveedorMateriales existente = proveedorMaterialesRepository
-                        .findByProveedor_IdAndMaterial_Id(proveedorGuardado.getId(), materialFinal.getId());
-
-                if (existente != null) {
-                    // Relación ya existe, sumar cantidades
-
-                    Long cantidadAnterior = existente.getCantidadSuministrada() != null ? existente.getCantidadSuministrada() : 0L;
-                    Long nuevaCantidad = pmDTO.getCantidadSuministrada() != null ? pmDTO.getCantidadSuministrada() : 0L;
-
-                    // Sumamos la cantidad suministrada nueva a la anterior
-                    Long cantidadSumada = cantidadAnterior + nuevaCantidad;
-                    existente.setCantidadSuministrada(cantidadSumada);
-
-                    // Actualizamos el stock del material sumando la nueva cantidad
-                    Long stockActual = materialFinal.getStockActual() != null ? materialFinal.getStockActual() : 0L;
-                    materialFinal.setStockActual(stockActual + nuevaCantidad);
-                    materialRepository.save(materialFinal);
-
-                    proveedorMaterialesRepository.save(existente);
-                    pmGuardados.add(existente);
-
-                } else {
-                    // Crear la relación proveedor-material con costo unitario y cantidad suministrada
-                    ProveedorMateriales pmNuevo = new ProveedorMateriales();
-                    pmNuevo.setProveedor(proveedorGuardado);
-                    pmNuevo.setMaterial(materialFinal);
-                    pmNuevo.setCostoUnitario(pmDTO.getCostoUnitario());
-                    pmNuevo.setCantidadSuministrada(pmDTO.getCantidadSuministrada() != null ? pmDTO.getCantidadSuministrada() : 0L);
-
-                    // Actualizar stock sumando cantidad suministrada nueva
-                    Long stockActual = materialFinal.getStockActual() != null ? materialFinal.getStockActual() : 0L;
-                    Long cantidadSum = pmNuevo.getCantidadSuministrada();
-                    materialFinal.setStockActual(stockActual + cantidadSum);
-                    materialRepository.save(materialFinal);
-
-                    ProveedorMateriales pmResult = proveedorMaterialesService.guardar(pmNuevo);
-                    pmGuardados.add(pmResult);
-                }
-            }
-        }
-
-        // Actualizar la lista de relaciones en proveedor
-        proveedorGuardado.getProveedorMateriales().clear();
-        proveedorGuardado.getProveedorMateriales().addAll(pmGuardados);
-
-        return proveedorGuardado;
+        return proveedorRepository.save(proveedor);
     }
 
 
@@ -195,7 +103,6 @@ public class ProveedorService {
             proveedorDTO.setTelefono(proveedor.getTelefono());
             proveedorDTO.setCorreo(proveedor.getCorreo());
             proveedorDTO.setDireccion(proveedor.getDireccion());
-            proveedorDTO.setFechaPedido(proveedor.getFechaPedido());
 
             if (proveedor.getProveedorMateriales() != null) {
                 List<ProveedorMaterialDTO> pmDTOs = proveedor.getProveedorMateriales().stream().map(pm -> {
@@ -237,7 +144,7 @@ public class ProveedorService {
         existente.setTelefono(proveedorActualizado.getTelefono());
         existente.setCorreo(proveedorActualizado.getCorreo());
         existente.setDireccion(proveedorActualizado.getDireccion());
-        existente.setFechaPedido(proveedorActualizado.getFechaPedido());
+
 
         // 2. Si vienen relaciones a Materiales
         if (proveedorActualizado.getProveedorMateriales() != null) {

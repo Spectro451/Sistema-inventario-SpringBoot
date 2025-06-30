@@ -38,76 +38,56 @@ public class PedidoService {
 
     @Transactional
     public PedidoDTO guardar(PedidoDTO pedidoDTO) {
-        // 1. Obtener proveedor existente
         Long proveedorId = pedidoDTO.getProveedor().getId();
         Proveedor proveedor = proveedorRepository.findById(proveedorId)
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado con id: " + proveedorId));
 
-        // 2. Crear nuevo pedido
         Pedido pedido = new Pedido();
         pedido.setFechaPedido(pedidoDTO.getFechaPedido());
         pedido.setProveedor(proveedor);
-        Pedido pedidoGuardado = pedidoRepository.save(pedido);
 
-        // 3. Procesar materiales asociados (si hay)
+        long costoTotalPedido = 0L;
+        long sumaCantidadPedido = 0L;
+
         List<ProveedorMaterialDTO> materiales = pedidoDTO.getProveedor().getProveedorMateriales();
         if (materiales != null && !materiales.isEmpty()) {
-
             for (ProveedorMaterialDTO pmDTO : materiales) {
-
-                MaterialSimpleDTO materialDTO = pmDTO.getMaterial();
-                Material materialFinal;
-
-                // Buscar o crear material
-                if (materialDTO.getId() != null) {
-                    materialFinal = materialRepository.findById(materialDTO.getId())
-                            .orElseThrow(() -> new RuntimeException("Material no encontrado con id: " + materialDTO.getId()));
-                } else {
-                    Optional<Material> materialExistente = materialRepository.findByNombreAndTipo(
-                            materialDTO.getNombre(),
-                            TipoMaterial.valueOf(materialDTO.getTipo().toUpperCase())
-                    );
-                    materialFinal = materialExistente.orElseGet(() -> {
-                        Material nuevo = new Material();
-                        nuevo.setNombre(materialDTO.getNombre());
-                        nuevo.setTipo(TipoMaterial.valueOf(materialDTO.getTipo().toUpperCase()));
-                        nuevo.setDescripcion(materialDTO.getDescripcion());
-                        nuevo.setUnidadDeMedida(materialDTO.getUnidadDeMedida());
-                        nuevo.setStockActual(materialDTO.getStockActual() != null ? materialDTO.getStockActual() : 0L);
-                        return materialRepository.save(nuevo);
-                    });
+                Long relacionId = pmDTO.getId();
+                if (relacionId == null) {
+                    throw new RuntimeException("Falta ID de la relación ProveedorMateriales");
                 }
 
-                // Buscar relación existente
-                ProveedorMateriales existente = proveedorMaterialesRepository
-                        .findByProveedor_IdAndMaterial_Id(proveedor.getId(), materialFinal.getId());
+                ProveedorMateriales relacion = proveedorMaterialesRepository.findById(relacionId)
+                        .orElseThrow(() -> new RuntimeException("Relación ProveedorMateriales no encontrada con id: " + relacionId));
 
-                if (existente != null) {
-                    // Sumar cantidades
-                    Long cantidadAnterior = existente.getCantidadSuministrada() != null ? existente.getCantidadSuministrada() : 0L;
-                    Long nuevaCantidad = pmDTO.getCantidadSuministrada() != null ? pmDTO.getCantidadSuministrada() : 0L;
+                Material material = relacion.getMaterial();
 
-                    existente.setCantidadSuministrada(cantidadAnterior + nuevaCantidad);
-                    materialFinal.setStockActual(materialFinal.getStockActual() + nuevaCantidad);
-                    materialRepository.save(materialFinal);
-                    proveedorMaterialesRepository.save(existente);
-                } else {
-                    // Crear nueva relación
-                    ProveedorMateriales nuevaRelacion = new ProveedorMateriales();
-                    nuevaRelacion.setProveedor(proveedor);
-                    nuevaRelacion.setMaterial(materialFinal);
-                    nuevaRelacion.setCostoUnitario(pmDTO.getCostoUnitario());
-                    nuevaRelacion.setCantidadSuministrada(pmDTO.getCantidadSuministrada() != null ? pmDTO.getCantidadSuministrada() : 0L);
+                Long cantidadPedidoMaterial = pmDTO.getCantidadSuministrada() != null ? pmDTO.getCantidadSuministrada() : 0L;
+                if (cantidadPedidoMaterial <= 0) continue;  // Ignorar cantidades 0 o negativas
 
-                    // Aumentar stock
-                    materialFinal.setStockActual(materialFinal.getStockActual() + nuevaRelacion.getCantidadSuministrada());
-                    materialRepository.save(materialFinal);
-                    proveedorMaterialesService.guardar(nuevaRelacion);
-                }
+                // Actualizar stock del material
+                Long nuevoStock = (material.getStockActual() != null ? material.getStockActual() : 0L) + cantidadPedidoMaterial;
+                material.setStockActual(nuevoStock);
+                materialRepository.save(material);
+
+                // Actualizar cantidad suministrada en relación proveedor-material
+                Long cantidadAnterior = relacion.getCantidadSuministrada() != null ? relacion.getCantidadSuministrada() : 0L;
+                relacion.setCantidadSuministrada(cantidadAnterior + cantidadPedidoMaterial);
+                proveedorMaterialesRepository.save(relacion);
+
+                // Acumular costos y cantidades para el pedido
+                Long costoUnitario = relacion.getCostoUnitario() != null ? relacion.getCostoUnitario() : 0L;
+                costoTotalPedido += costoUnitario * cantidadPedidoMaterial;
+                sumaCantidadPedido += cantidadPedidoMaterial;
             }
         }
 
-        // 4. Devolver el DTO
+        // Guardar cantidadPedido y costoTotal calculados en pedido
+        pedido.setCantidadPedido(sumaCantidadPedido);
+        pedido.setCostoTotal(costoTotalPedido);
+
+        Pedido pedidoGuardado = pedidoRepository.save(pedido);
+
         return toDTO(pedidoGuardado);
     }
 
@@ -179,6 +159,10 @@ public class PedidoService {
 
             dto.setProveedor(pDto);
         }
+
+        // 🔧 FALTABA ESTO:
+        dto.setCantidadPedido(pedido.getCantidadPedido());
+        dto.setCostoTotal(pedido.getCostoTotal());
 
         return dto;
     }

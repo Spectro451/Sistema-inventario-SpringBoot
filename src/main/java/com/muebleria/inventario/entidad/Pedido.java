@@ -29,4 +29,11 @@ public class Pedido {
     @JoinColumn(name = "proveedor_id", nullable = false)
     private Proveedor proveedor;
 
+    @NotNull
+    @Column(name = "cantidad_pedido", nullable = false)
+    private Long cantidadPedido;
+
+    @NotNull
+    @Column(name = "costo_total", nullable = false)
+    private Long costoTotal;
 }

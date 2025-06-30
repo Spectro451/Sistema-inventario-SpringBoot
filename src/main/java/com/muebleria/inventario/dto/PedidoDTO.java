@@ -17,4 +17,6 @@ public class PedidoDTO {
     private LocalDate fechaPedido;
 
     private ProveedorDTO proveedor;
+    private Long cantidadPedido;
+    private Long costoTotal;
 }

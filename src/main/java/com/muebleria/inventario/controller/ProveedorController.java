@@ -25,18 +25,13 @@ public class ProveedorController {
 //    }
 
     @PostMapping
-    public ResponseEntity<?> guardar(@RequestBody ProveedorDTO proveedorDTO) {
+    public ResponseEntity<ProveedorDTO> guardar(@RequestBody ProveedorDTO proveedorDTO) {
         try {
-            // Llamamos al método que recibe el DTO
-            Proveedor creado = proveedorService.guardarProveedor(proveedorDTO);
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .body(creado);
+            ProveedorDTO creado = proveedorService.guardarProveedor(proveedorDTO);
+            return ResponseEntity.status(HttpStatus.CREATED).body(creado);
         } catch (RuntimeException ex) {
-            // Devolvemos el mensaje de la excepción en caso de error de validación
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Collections.singletonMap("error", ex.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(null); // o mejor manejo de errores
         }
     }
 
@@ -60,11 +55,11 @@ public class ProveedorController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Proveedor> actualizarProveedor(
+    public ResponseEntity<ProveedorDTO> actualizarProveedor(
             @PathVariable Long id,
-            @RequestBody Proveedor proveedorActualizado) {
+            @RequestBody ProveedorDTO proveedorDTO) {
 
-        Proveedor proveedor = proveedorService.actualizarProveedor(id, proveedorActualizado);
-        return ResponseEntity.ok(proveedor);
+        ProveedorDTO actualizado = proveedorService.actualizarProveedor(id, proveedorDTO);
+        return ResponseEntity.ok(actualizado);
     }
 }

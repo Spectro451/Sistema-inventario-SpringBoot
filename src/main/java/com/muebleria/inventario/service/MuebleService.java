@@ -11,10 +11,16 @@ import com.muebleria.inventario.entidad.Mueble;
 import com.muebleria.inventario.repository.MaterialMuebleRepository;
 import com.muebleria.inventario.repository.MaterialRepository;
 import com.muebleria.inventario.repository.MuebleRepository;
+import com.muebleria.inventario.util.ExcelStyleUtil;
 import jakarta.transaction.Transactional;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -279,5 +285,75 @@ public class MuebleService {
 
             return muebleDTO;
         }).collect(Collectors.toList());
+    }
+
+    public byte[] generarReporteMueble() throws IOException {
+        List<MuebleDTO> muebles = findAllDTO();
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            CellStyle estiloTitulo = ExcelStyleUtil.crearEstiloTitulo(workbook);
+            CellStyle estiloDatos = ExcelStyleUtil.crearEstiloDatos(workbook);
+            CellStyle estiloStockBajo = ExcelStyleUtil.crearEstiloStockBajo(workbook);
+            Sheet hojaDatos = workbook.createSheet("MaterialDatos");
+
+            // Encabezados
+            Row header = hojaDatos.createRow(0);
+            String[] columnas = {"ID", "Nombre", "Descripcion", "Precio Venta", "Stock", "Materiales Usados"};
+            for (int i = 0; i < columnas.length; i++) {
+                Cell cell = header.createCell(i);
+                cell.setCellValue("   " + columnas[i] + "   ");
+                cell.setCellStyle(estiloTitulo); // Aplico estilo al encabezado
+            }
+
+            int rowNum = 1;
+            for (MuebleDTO mueble : muebles) {
+                Row row = hojaDatos.createRow(rowNum++);
+                row.createCell(0).setCellValue(mueble.getId());
+                row.createCell(1).setCellValue(mueble.getNombre());
+                row.createCell(2).setCellValue(mueble.getDescripcion());
+                row.createCell(3).setCellValue(mueble.getPrecioVenta());
+                row.createCell(4).setCellValue(mueble.getStock());
+
+                // Concatenar nombres de proveedores
+                String nombresMaterial = mueble.getMaterialMuebles().stream()
+                        .map(mm -> mm.getMaterial().getNombre() + " : " + mm.getCantidadUtilizada())
+                        .distinct()
+                        .collect(Collectors.joining(", "));
+
+                row.createCell(5).setCellValue(nombresMaterial);
+
+                // Aplico el estilo a todas las celdas
+                for (int i = 0; i <= 5; i++) {
+                    if (i == 4) { // columna de stock
+                        Cell stockCell = row.getCell(i);
+                        if (mueble.getStock() <= 5) {
+                            stockCell.setCellStyle(estiloStockBajo);
+                        } else {
+                            stockCell.setCellStyle(estiloDatos);
+                        }
+                    } else {
+                        row.getCell(i).setCellStyle(estiloDatos);
+                    }
+                }
+            }
+            hojaDatos.setAutoFilter(new CellRangeAddress(
+                    0,
+                    muebles.size(),
+                    0,
+                    5
+            ));
+
+            // Autoajustar ancho columnas
+            for (int i = 0; i < columnas.length; i++) {
+                hojaDatos.autoSizeColumn(i);
+                int currentWidth = hojaDatos.getColumnWidth(i);
+                int extraWidth = 738;
+                hojaDatos.setColumnWidth(i, currentWidth + extraWidth);
+            }
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        }
     }
 }

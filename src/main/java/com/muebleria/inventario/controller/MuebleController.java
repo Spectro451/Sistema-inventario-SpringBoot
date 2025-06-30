@@ -6,10 +6,10 @@ import com.muebleria.inventario.entidad.Mueble;
 import com.muebleria.inventario.service.MuebleService;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,5 +70,18 @@ public class MuebleController {
     public List<MuebleDTO> listarMuebles() {
 
         return muebleService.findAllDTO();
+    }
+
+    @GetMapping("/reporte")
+    public ResponseEntity<byte[]> generarReporteMaterial() throws IOException {
+        byte[] excelBytes = muebleService.generarReporteMueble();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDisposition(ContentDisposition.attachment().filename("Materiales.xlsx").build());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelBytes);
     }
 }

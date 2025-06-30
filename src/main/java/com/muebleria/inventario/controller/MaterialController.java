@@ -6,10 +6,10 @@ import com.muebleria.inventario.entidad.Material;
 import com.muebleria.inventario.entidad.TipoMaterial;
 import com.muebleria.inventario.service.MaterialService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,5 +60,17 @@ public class MaterialController {
     public ResponseEntity<Material> actualizarMaterial(@PathVariable Long id, @RequestBody Material material) {
         Material actualizado = materialService.actualizarMaterial(id, material);
         return ResponseEntity.ok(actualizado);
+    }
+    @GetMapping("/reporte")
+    public ResponseEntity<byte[]> generarReporteMaterial() throws IOException {
+        byte[] excelBytes = materialService.generarReporteMaterial();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDisposition(ContentDisposition.attachment().filename("Materiales.xlsx").build());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelBytes);
     }
 }

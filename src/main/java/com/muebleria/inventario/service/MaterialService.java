@@ -105,7 +105,9 @@ public class MaterialService {
             CellStyle estiloTitulo = ExcelStyleUtil.crearEstiloTitulo(workbook);
             CellStyle estiloDatos = ExcelStyleUtil.crearEstiloDatos(workbook);
             CellStyle estiloStockBajo = ExcelStyleUtil.crearEstiloStockBajo(workbook);
-            Sheet hojaDatos = workbook.createSheet("MaterialDatos");
+            CellStyle estiloWrap = ExcelStyleUtil.crearEstiloWrap(workbook);
+
+            Sheet hojaDatos = workbook.createSheet("Reporte Materiales");
 
             // Encabezados
             Row header = hojaDatos.createRow(0);
@@ -130,13 +132,13 @@ public class MaterialService {
                 String nombresProveedores = material.getProveedorMateriales().stream()
                         .map(pm -> pm.getNombreProveedor())
                         .distinct()
-                        .collect(Collectors.joining(", "));
+                        .collect(Collectors.joining("\n"));
 
                 // Concatenar nombres de muebles
                 String nombresMuebles = material.getMaterialMuebles().stream()
                         .map(mm -> mm.getNombreMueble())
                         .distinct()
-                        .collect(Collectors.joining(", "));
+                        .collect(Collectors.joining("\n"));
 
                 row.createCell(6).setCellValue(nombresProveedores);
                 row.createCell(7).setCellValue(nombresMuebles);
@@ -144,15 +146,18 @@ public class MaterialService {
 
                 // Aplico el estilo a todas las celdas
                 for (int i = 0; i <= 7; i++) {
-                    if (i == 5) { // columna de stock
-                        Cell stockCell = row.getCell(i);
-                        if (material.getStockActual() <= 10) {
-                            stockCell.setCellStyle(estiloStockBajo);
-                        } else {
-                            stockCell.setCellStyle(estiloDatos);
+                    Cell c = row.getCell(i);
+                    if (i == 5) {
+                        if (material.getStockActual() <= 10){
+                            c.setCellStyle(estiloStockBajo);
+                        } else{
+                            c.setCellStyle(estiloDatos);
                         }
+
+                    } else if (i == 6 || i == 7) {
+                        c.setCellStyle(estiloWrap);
                     } else {
-                        row.getCell(i).setCellStyle(estiloDatos);
+                        c.setCellStyle(estiloDatos);
                     }
                 }
             }

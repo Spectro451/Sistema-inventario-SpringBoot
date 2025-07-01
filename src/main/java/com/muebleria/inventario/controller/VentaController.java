@@ -4,10 +4,10 @@ import com.muebleria.inventario.dto.VentaDTO;
 import com.muebleria.inventario.entidad.Venta;
 import com.muebleria.inventario.service.VentaService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -67,5 +67,17 @@ public class VentaController {
             // Aquí puedes manejar errores específicos y devolver diferentes códigos HTTP si quieres
             return ResponseEntity.status(HttpStatus.CONFLICT).body(null);
         }
+    }
+    @GetMapping("/reporte")
+    public ResponseEntity<byte[]> generarReporteVenta() throws IOException {
+        byte[] excelBytes = ventaService.generarReporteVenta();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDisposition(ContentDisposition.attachment().filename("Materiales.xlsx").build());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelBytes);
     }
 }

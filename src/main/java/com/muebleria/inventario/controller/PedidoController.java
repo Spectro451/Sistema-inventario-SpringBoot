@@ -4,10 +4,10 @@ import com.muebleria.inventario.dto.PedidoDTO;
 import com.muebleria.inventario.service.PedidoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -43,5 +43,17 @@ public class PedidoController {
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         pedidoService.eliminar(id);
         return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/reporte")
+    public ResponseEntity<byte[]> generarReportePedido() throws IOException {
+        byte[] excelBytes = pedidoService.generarReportePedido();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDisposition(ContentDisposition.attachment().filename("Materiales.xlsx").build());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelBytes);
     }
 }

@@ -7,6 +7,10 @@ public enum TipoMaterial {
     ADHESIVO,
     FIJACION,
     HERRAJES,
+    PINTURA,
+    VIDRIO,
+    METAL,
+    PLASTICO,
     ACABADO;
 
 

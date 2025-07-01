@@ -289,73 +289,84 @@ public class ProveedorService {
         return salida;
     }
 
-//    public byte[] generarReporteProveedor() throws IOException {
-//        List<MuebleDTO> muebles = findAllDTO();
-//
-//        try (Workbook workbook = new XSSFWorkbook()) {
-//            CellStyle estiloTitulo = ExcelStyleUtil.crearEstiloTitulo(workbook);
-//            CellStyle estiloDatos = ExcelStyleUtil.crearEstiloDatos(workbook);
-//            CellStyle estiloStockBajo = ExcelStyleUtil.crearEstiloStockBajo(workbook);
-//            Sheet hojaDatos = workbook.createSheet("MaterialDatos");
-//
-//            // Encabezados
-//            Row header = hojaDatos.createRow(0);
-//            String[] columnas = {"ID", "Nombre", "Descripcion", "Precio Venta", "Stock", "Materiales Usados"};
-//            for (int i = 0; i < columnas.length; i++) {
-//                Cell cell = header.createCell(i);
-//                cell.setCellValue("   " + columnas[i] + "   ");
-//                cell.setCellStyle(estiloTitulo); // Aplico estilo al encabezado
-//            }
-//
-//            int rowNum = 1;
-//            for (MuebleDTO mueble : muebles) {
-//                Row row = hojaDatos.createRow(rowNum++);
-//                row.createCell(0).setCellValue(mueble.getId());
-//                row.createCell(1).setCellValue(mueble.getNombre());
-//                row.createCell(2).setCellValue(mueble.getDescripcion());
-//                row.createCell(3).setCellValue(mueble.getPrecioVenta());
-//                row.createCell(4).setCellValue(mueble.getStock());
-//
-//                // Concatenar nombres de proveedores
-//                String nombresMaterial = mueble.getMaterialMuebles().stream()
-//                        .map(mm -> mm.getMaterial().getNombre() + " : " + mm.getCantidadUtilizada())
-//                        .distinct()
-//                        .collect(Collectors.joining(", "));
-//
-//                row.createCell(5).setCellValue(nombresMaterial);
-//
-//                // Aplico el estilo a todas las celdas
-//                for (int i = 0; i <= 5; i++) {
-//                    if (i == 4) { // columna de stock
-//                        Cell stockCell = row.getCell(i);
-//                        if (mueble.getStock() <= 5) {
-//                            stockCell.setCellStyle(estiloStockBajo);
-//                        } else {
-//                            stockCell.setCellStyle(estiloDatos);
-//                        }
-//                    } else {
-//                        row.getCell(i).setCellStyle(estiloDatos);
-//                    }
-//                }
-//            }
-//            hojaDatos.setAutoFilter(new CellRangeAddress(
-//                    0,
-//                    muebles.size(),
-//                    0,
-//                    5
-//            ));
-//
-//            // Autoajustar ancho columnas
-//            for (int i = 0; i < columnas.length; i++) {
-//                hojaDatos.autoSizeColumn(i);
-//                int currentWidth = hojaDatos.getColumnWidth(i);
-//                int extraWidth = 738;
-//                hojaDatos.setColumnWidth(i, currentWidth + extraWidth);
-//            }
-//
-//            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-//            workbook.write(outputStream);
-//            return outputStream.toByteArray();
-//        }
-//    }
+    public byte[] generarReporteProveedor() throws IOException {
+        List<ProveedorDTO> proveedores = findAllDTO();
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            CellStyle estiloTitulo = ExcelStyleUtil.crearEstiloTitulo(workbook);
+            CellStyle estiloDatos = ExcelStyleUtil.crearEstiloDatos(workbook);
+            CellStyle estiloFecha = ExcelStyleUtil.crearEstiloFecha(workbook);
+            CellStyle estiloMoneda = ExcelStyleUtil.crearEstiloMoneda(workbook);
+
+            // Crear estilo con wrapText para materiales con saltos de línea
+            CellStyle estiloWrap = workbook.createCellStyle();
+            estiloWrap.cloneStyleFrom(estiloDatos);
+            estiloWrap.setWrapText(true);
+
+            Sheet hojaDatos = workbook.createSheet("Reporte Proveedor");
+
+            // Encabezados
+            Row header = hojaDatos.createRow(0);
+            String[] columnas = {"ID", "Nombre", "Telefono", "Correo", "Direccion", "Materiales"};
+            for (int i = 0; i < columnas.length; i++) {
+                Cell cell = header.createCell(i);
+                cell.setCellValue("   " + columnas[i] + "   ");
+                cell.setCellStyle(estiloTitulo);
+            }
+
+            int rowNum = 1;
+            for (ProveedorDTO proveedor : proveedores) {
+                Row row = hojaDatos.createRow(rowNum++);
+                row.createCell(0).setCellValue(proveedor.getId());
+                row.createCell(1).setCellValue(proveedor.getNombre());
+                row.createCell(2).setCellValue(proveedor.getTelefono());
+                row.createCell(3).setCellValue(proveedor.getCorreo());
+                row.createCell(4).setCellValue(proveedor.getDireccion());
+
+                String nombresMaterial = "";
+                if (proveedor.getProveedorMateriales() != null) {
+                    nombresMaterial = proveedor.getProveedorMateriales().stream()
+                            .map(mm -> String.format("%s: %d unidades ($%d c/u)",
+                                    mm.getMaterial().getNombre(),
+                                    mm.getCantidadSuministrada(),
+                                    mm.getCostoUnitario()
+                            ))
+                            .distinct()
+                            .collect(Collectors.joining("\n"));
+                }
+
+                Cell materialesCell = row.createCell(5);
+                materialesCell.setCellValue(nombresMaterial);
+                materialesCell.setCellStyle(estiloWrap);
+
+                for (int i = 0; i <= 5; i++) {
+                    Cell c = row.getCell(i);
+                    if (i == 5) {
+                        c.setCellStyle(estiloWrap); // texto con wrap
+                    } else {
+                        c.setCellStyle(estiloDatos); // resto celdas
+                    }
+                }
+            }
+            int ultimaColumna = columnas.length - 1;
+            hojaDatos.setAutoFilter(new CellRangeAddress(
+                    0,
+                    proveedores.size(),
+                    0,
+                    ultimaColumna
+            ));
+
+            // Autoajustar ancho columnas
+            for (int i = 0; i < columnas.length; i++) {
+                hojaDatos.autoSizeColumn(i);
+                int currentWidth = hojaDatos.getColumnWidth(i);
+                int extraWidth = 738;
+                hojaDatos.setColumnWidth(i, currentWidth + extraWidth);
+            }
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        }
+    }
 }

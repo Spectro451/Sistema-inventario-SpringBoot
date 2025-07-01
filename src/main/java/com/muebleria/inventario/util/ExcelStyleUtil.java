@@ -48,4 +48,25 @@ public class ExcelStyleUtil {
         estilo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         return estilo;
     }
+    public static CellStyle crearEstiloFecha(Workbook workbook) {
+        CellStyle estilo = crearEstiloDatos(workbook);
+
+        CreationHelper createHelper = workbook.getCreationHelper();
+        estilo.setDataFormat(createHelper.createDataFormat().getFormat("dd/MM/yyyy"));
+
+        return estilo;
+    }
+    public static CellStyle crearEstiloMoneda(Workbook workbook) {
+        CellStyle estilo = crearEstiloDatos(workbook);
+        CreationHelper createHelper = workbook.getCreationHelper();
+
+        estilo.setDataFormat(createHelper.createDataFormat().getFormat("$#,##0"));
+        return estilo;
+    }
+    public static CellStyle crearEstiloWrap(Workbook workbook) {
+        CellStyle estilo = workbook.createCellStyle();            // crear estilo vacío
+        estilo.cloneStyleFrom(crearEstiloDatos(workbook));        // clonar estilo datos
+        estilo.setWrapText(true);                                 // activar wrap text
+        return estilo;
+    }
 }

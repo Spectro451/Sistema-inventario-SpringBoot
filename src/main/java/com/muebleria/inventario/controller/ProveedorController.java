@@ -4,10 +4,10 @@ import com.muebleria.inventario.dto.ProveedorDTO;
 import com.muebleria.inventario.entidad.Proveedor;
 import com.muebleria.inventario.service.ProveedorService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -61,5 +61,18 @@ public class ProveedorController {
 
         ProveedorDTO actualizado = proveedorService.actualizarProveedor(id, proveedorDTO);
         return ResponseEntity.ok(actualizado);
+    }
+
+    @GetMapping("/reporte")
+    public ResponseEntity<byte[]> generarReporteProveedor() throws IOException {
+        byte[] excelBytes = proveedorService.generarReporteProveedor();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDisposition(ContentDisposition.attachment().filename("Materiales.xlsx").build());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelBytes);
     }
 }

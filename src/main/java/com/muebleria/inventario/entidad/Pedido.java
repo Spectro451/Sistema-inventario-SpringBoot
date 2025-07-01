@@ -36,4 +36,8 @@ public class Pedido {
     @NotNull
     @Column(name = "costo_total", nullable = false)
     private Long costoTotal;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "detalle_pedido", joinColumns = @JoinColumn(name = "pedido_id"))
+    private List<DetallePedido> detalleCantidades = new ArrayList<>();
 }

@@ -294,7 +294,10 @@ public class MuebleService {
             CellStyle estiloTitulo = ExcelStyleUtil.crearEstiloTitulo(workbook);
             CellStyle estiloDatos = ExcelStyleUtil.crearEstiloDatos(workbook);
             CellStyle estiloStockBajo = ExcelStyleUtil.crearEstiloStockBajo(workbook);
-            Sheet hojaDatos = workbook.createSheet("MaterialDatos");
+            CellStyle estiloWrap = ExcelStyleUtil.crearEstiloWrap(workbook);
+            CellStyle estiloMoneda = ExcelStyleUtil.crearEstiloMoneda(workbook);
+
+            Sheet hojaDatos = workbook.createSheet("Reporte Mueble");
 
             // Encabezados
             Row header = hojaDatos.createRow(0);
@@ -314,33 +317,44 @@ public class MuebleService {
                 row.createCell(3).setCellValue(mueble.getPrecioVenta());
                 row.createCell(4).setCellValue(mueble.getStock());
 
-                // Concatenar nombres de proveedores
-                String nombresMaterial = mueble.getMaterialMuebles().stream()
-                        .map(mm -> mm.getMaterial().getNombre() + " : " + mm.getCantidadUtilizada())
-                        .distinct()
-                        .collect(Collectors.joining(", "));
+                String nombresMaterial = "";
+                if (mueble.getMaterialMuebles() != null) {
+                    nombresMaterial = mueble.getMaterialMuebles().stream()
+                            .map(mm -> String.format("%s: %d unidades",
+                                    mm.getMaterial().getNombre(),
+                                    mm.getCantidadUtilizada()
+                            ))
+                            .distinct()
+                            .collect(Collectors.joining("\n"));
+                }
 
                 row.createCell(5).setCellValue(nombresMaterial);
 
                 // Aplico el estilo a todas las celdas
                 for (int i = 0; i <= 5; i++) {
-                    if (i == 4) { // columna de stock
-                        Cell stockCell = row.getCell(i);
-                        if (mueble.getStock() <= 5) {
-                            stockCell.setCellStyle(estiloStockBajo);
+                    Cell c = row.getCell(i);
+                    if (i == 3) {
+                        c.setCellStyle(estiloMoneda); // fecha con formato y estilo general
+                    } else if (i == 4) {
+                        if (mueble.getStock() <= 10){
+                            c.setCellStyle(estiloStockBajo);
                         } else {
-                            stockCell.setCellStyle(estiloDatos);
+                            c.setCellStyle(estiloDatos);
                         }
+
+                    } else if (i == 5) {
+                        c.setCellStyle(estiloWrap);
                     } else {
-                        row.getCell(i).setCellStyle(estiloDatos);
+                        c.setCellStyle(estiloDatos); // resto celdas
                     }
                 }
             }
+            int ultimaColumna = columnas.length - 1;
             hojaDatos.setAutoFilter(new CellRangeAddress(
                     0,
                     muebles.size(),
                     0,
-                    5
+                    ultimaColumna
             ));
 
             // Autoajustar ancho columnas

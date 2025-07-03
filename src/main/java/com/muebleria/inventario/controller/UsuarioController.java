@@ -65,6 +65,12 @@ public class UsuarioController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateUsuario(@PathVariable Long id, @RequestBody Usuario usuario) {
+        usuario.setId(id); // asignar el ID que viene en la URL
+        Usuario nuevoUsuario = usuarioService.editar(usuario);
+        return ResponseEntity.ok(nuevoUsuario);
+    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {

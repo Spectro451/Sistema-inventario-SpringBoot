@@ -236,7 +236,7 @@ public class ProveedorService {
 
                     rel.setMaterial(material);
                     rel.setCostoUnitario(pmDTO.getCostoUnitario());
-                    rel.setCantidadSuministrada(pmDTO.getCantidadSuministrada());
+                    rel.setCantidadSuministrada(pmDTO.getCantidadSuministrada() != null ? pmDTO.getCantidadSuministrada() : 0L);
 
                     ProveedorMateriales creado = proveedorMaterialesService.guardarOActualizar(rel);
                     resultado.add(creado);

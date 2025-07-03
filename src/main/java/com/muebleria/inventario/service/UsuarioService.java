@@ -60,6 +60,31 @@ public class UsuarioService  implements UserDetailsService {
         usuario.setPassword(passwordEncryptada);
         return usuarioRepository.save(usuario);
     }
+    public Usuario editar(Usuario usuario) {
+        Usuario usuarioActual = usuarioRepository.findById(usuario.getId())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        Optional<Usuario> usuarioConMismoNombre = usuarioRepository.findByNombre(usuario.getNombre());
+        if (usuarioConMismoNombre.isPresent() &&
+                !usuarioConMismoNombre.get().getId().equals(usuario.getId())) {
+            throw new RuntimeException("El nombre de usuario ya está en uso");
+        }
+
+        usuarioActual.setNombre(usuario.getNombre());
+
+        if (!usuario.getPassword().equals(usuarioActual.getPassword())) {
+            String passwordEncryptada = passwordEncoder.encode(usuario.getPassword());
+            usuarioActual.setPassword(passwordEncryptada);
+        }
+
+        if (usuario.getRol() == null) {
+            usuarioActual.setRol(Rol.USUARIO);
+        } else {
+            usuarioActual.setRol(usuario.getRol());
+        }
+
+        return usuarioRepository.save(usuarioActual);
+    }
 
     public void eliminar(Long id) {
         if (!usuarioRepository.existsById(id)) {

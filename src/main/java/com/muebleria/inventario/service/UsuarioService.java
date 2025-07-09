@@ -72,7 +72,8 @@ public class UsuarioService  implements UserDetailsService {
 
         usuarioActual.setNombre(usuario.getNombre());
 
-        if (!usuario.getPassword().equals(usuarioActual.getPassword())) {
+        if (usuario.getPassword() != null && !usuario.getPassword().isBlank() &&
+                !usuario.getPassword().equals(usuarioActual.getPassword())) {
             String passwordEncryptada = passwordEncoder.encode(usuario.getPassword());
             usuarioActual.setPassword(passwordEncryptada);
         }
